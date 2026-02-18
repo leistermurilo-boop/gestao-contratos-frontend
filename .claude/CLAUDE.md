@@ -2,6 +2,16 @@
 
 You are working with Synkra AIOS, an AI-Orchestrated System for Full Stack Development.
 
+## 🛡️ REGRAS DE VALIDAÇÃO
+
+ANTES de implementar QUALQUER story:
+1. @analyst: Leia .claude/VALIDATION_RULES.md
+2. @analyst: Execute validação de 5 pontos
+3. @dev: Só implementa após aprovação do @analyst
+4. @analyst: Valida pós-implementação antes de commit
+
+---
+
 <!-- AIOS-MANAGED-START: core-framework -->
 ## Core Framework Understanding
 
