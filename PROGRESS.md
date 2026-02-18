@@ -1,7 +1,7 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-02-13
-**Sessão:** Criação de Stories de Desenvolvimento Frontend
+**Data:** 2026-02-18 (última atualização)
+**Sessão:** Identidade Visual "DUO Governance" + Preparação para @dev
 **Agentes:** @architect → @sm (River)
 
 ---
@@ -34,6 +34,20 @@ docs/
 ├── roadmap-executivo.md           # ✅ Existente - Roadmap de 12 dias
 └── setup-guide.md                 # ✅ Existente - Guia de setup
 ```
+
+## 🎨 Identidade Visual (18/02/2026)
+
+✅ Story 1.2 atualizada com identidade oficial "DUO Governance":
+- Paleta: brand-navy (#0F172A) + brand-emerald (#10B981)
+- Tipografia: Inter (Google Fonts)
+- Logo.svg e Favicon.svg prontos na raiz
+- Instruções completas de implementação
+- Exemplos de código para Login e Sidebar
+- Estimativa atualizada: 2h → 3h
+
+Arquivos fonte prontos:
+- /Logo.svg → copiar para frontend/public/logo.svg
+- /Favicon.svg → copiar para frontend/public/favicon.svg
 
 ### Stories de Desenvolvimento (docs/stories/) - **42 arquivos NOVOS**
 ```
@@ -389,10 +403,10 @@ Ao retornar para continuar o projeto:
 
 ---
 
-**Última atualização:** 2026-02-13 20:30
+**Última atualização:** 2026-02-18
 **Status:** ✅ Pronto para @dev iniciar implementação
 **Próxima ação:** Ler e executar `story-1.1.md`
 
 ---
 
-🌊 **River (@sm) - Todas as stories criadas e documentadas. Projeto pronto para desenvolvimento!**
+🌊 **River (@sm) - Identidade visual "DUO Governance" documentada. Projeto 100% pronto para desenvolvimento!**
