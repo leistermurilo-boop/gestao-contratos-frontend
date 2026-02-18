@@ -37,10 +37,17 @@ export default function LoginPage() {
     try {
       await signIn(email, password)
 
-      // Redirecionar para rota original ou dashboard
+      // Redirecionar para rota original ou dashboard (com validação anti-open-redirect)
       const redirect = searchParams.get('redirect')
       if (redirect) {
-        router.push(redirect)
+        // Validar que é path interno seguro
+        const isSafePath = redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('://')
+        if (isSafePath) {
+          router.push(redirect)
+        } else {
+          console.warn('Redirect param inválido (possível open redirect):', redirect)
+          router.push('/dashboard')
+        }
       }
       // Se não há redirect, signIn já redireciona para /dashboard
     } catch (error: any) {
