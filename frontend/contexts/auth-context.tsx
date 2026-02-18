@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), []) // ✅ Estabilizar supabase client
 
   const loadUser = async () => {
     try {
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', session.user.id)
           .single()
 
-        if (error) {
+        if (error || !usuarioData) { // ✅ Verificar null também
           console.error('Erro ao buscar usuário:', error)
           await supabase.auth.signOut()
           setUser(null)
@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setUsuario(null)
+          setLoading(false) // ✅ Resetar loading
         }
       }
     )
@@ -125,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    await loadUser()
+    // ✅ loadUser será chamado pelo onAuthStateChange (SIGNED_IN)
     router.push('/dashboard')
   }
 
