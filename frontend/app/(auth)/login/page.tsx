@@ -1,41 +1,55 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { loginSchema, type LoginFormData } from '@/lib/validations/auth.schema'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export default function LoginPage() {
+  const { signIn } = useAuth()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { signIn, loading: authLoading } = useAuth()
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [loginError, setLoginError] = useState<string | null>(null)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  })
 
   useEffect(() => {
-    // Verificar mensagens de erro do middleware
-    const error = searchParams.get('error')
-    if (error === 'inactive') {
-      setErrorMessage('Sua conta está inativa. Entre em contato com o administrador.')
-    } else if (error === 'db') {
-      setErrorMessage('Erro ao verificar suas credenciais. Tente novamente.')
+    const errorParam = searchParams.get('error')
+    if (errorParam === 'inactive') {
+      setError('Sua conta está inativa. Entre em contato com o administrador.')
+    } else if (errorParam === 'db') {
+      setError('Erro ao verificar suas credenciais. Tente novamente.')
+    } else if (errorParam === 'callback') {
+      setError('Erro ao processar autenticação. Tente novamente.')
+    }
+
+    const successParam = searchParams.get('success')
+    if (successParam === 'reset') {
+      setSuccess('Email de recuperação enviado! Verifique sua caixa de entrada.')
     }
   }, [searchParams])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setLoginError(null)
-
+  const onSubmit = async (data: LoginFormData) => {
     try {
-      await signIn(email, password)
+      setLoading(true)
+      setError(null)
+      await signIn(data.email, data.password)
 
       // Redirecionar para rota original ou dashboard (com validação anti-open-redirect)
       const redirect = searchParams.get('redirect')
@@ -50,81 +64,82 @@ export default function LoginPage() {
         }
       }
       // Se não há redirect, signIn já redireciona para /dashboard
-    } catch (error: any) {
-      console.error('Erro no login:', error)
-      setLoginError(error.message || 'Erro ao fazer login. Verifique suas credenciais.')
+    } catch (err: any) {
+      console.error('Erro no login:', err)
+      setError(err.message || 'Erro ao fazer login. Verifique suas credenciais.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>DUO Governance</CardTitle>
-          <CardDescription>Sistema de Gestão de Contratos</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Mensagens de erro do middleware */}
-          {errorMessage && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{errorMessage}</AlertDescription>
+    <Card>
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl">Gestão de Contratos</CardTitle>
+        <CardDescription>
+          Entre com suas credenciais para acessar o sistema
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          {/* Mensagens de erro do login */}
-          {loginError && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{loginError}</AlertDescription>
+          {success && (
+            <Alert className="bg-green-50 border-green-200">
+              <AlertDescription className="text-green-800">{success}</AlertDescription>
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading || authLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Senha
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading || authLoading}
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading || authLoading}
-            >
-              {loading ? 'Entrando...' : 'Entrar'}
-            </Button>
-          </form>
-
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            <p>Sistema multi-tenant com isolamento RLS</p>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="seu@email.com"
+              {...register('email')}
+              disabled={loading}
+            />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email.message}</p>
+            )}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Senha</Label>
+              <Link
+                href="/recuperar-senha"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Esqueceu a senha?
+              </Link>
+            </div>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              {...register('password')}
+              disabled={loading}
+            />
+            {errors.password && (
+              <p className="text-sm text-red-500">{errors.password.message}</p>
+            )}
+          </div>
+
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar'}
+          </Button>
+        </form>
+      </CardContent>
+      <CardFooter className="flex flex-col space-y-2">
+        <div className="text-sm text-muted-foreground text-center">
+          Sistema multi-tenant com Supabase
+        </div>
+      </CardFooter>
+    </Card>
   )
 }
