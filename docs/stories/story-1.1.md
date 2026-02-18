@@ -257,15 +257,15 @@ next-env.d.ts
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] Projeto Next.js 14.2.3 inicializado em `/frontend`
-- [ ] Todas as dependências do `package.json` instaladas sem erros
-- [ ] `tsconfig.json` configurado com paths `@/*`
-- [ ] Estrutura de pastas base criada (components, lib, types, contexts, public)
-- [ ] `.env.local` criado com credenciais Supabase válidas
-- [ ] `.env.example` criado como template
-- [ ] `.gitignore` atualizado para excluir `.env.local`
-- [ ] **Teste:** `npm run dev` inicia servidor em `http://localhost:3000` sem erros
-- [ ] **Teste:** Página inicial do Next.js é exibida no navegador
+- [x] Projeto Next.js 14.2.3 inicializado em `/frontend`
+- [x] Todas as dependências do `package.json` instaladas sem erros
+- [x] `tsconfig.json` configurado com paths `@/*`
+- [x] Estrutura de pastas base criada (components, lib, types, contexts, public)
+- [x] `.env.local` criado com credenciais Supabase válidas
+- [x] `.env.example` criado como template
+- [x] `.gitignore` atualizado para excluir `.env.local`
+- [x] **Teste:** `npm run dev` inicia servidor em `http://localhost:3000` sem erros
+- [x] **Teste:** Página inicial do Next.js é exibida no navegador
 
 ---
 
@@ -304,5 +304,29 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Completed
 **Criado por:** @sm (River) - 2026-02-13
+**Implementado por:** @dev (Dex) - 2026-02-18
+
+---
+
+## 📝 Dev Agent Record
+
+### Completion Notes:
+- Projeto Next.js 14.2.3 criado com sucesso
+- 495 pacotes instalados (Supabase, React Hook Form, Zod, Radix UI, etc)
+- Estrutura de pastas completa criada
+- Servidor dev testado e funcionando em http://localhost:3000
+- Arquivos .env.local e .env.example configurados
+
+### File List:
+- `frontend/package.json` - Dependências completas
+- `frontend/tsconfig.json` - Config TypeScript com target ES2017
+- `frontend/.env.local` - Credenciais Supabase (não commitado)
+- `frontend/.env.example` - Template de env vars
+- `frontend/.gitignore` - Atualizado com .env e IDE
+- Estrutura de pastas: components/, lib/, types/, contexts/, public/, app/
+
+### Change Log:
+- 2026-02-18: Inicialização completa do projeto Next.js 14
+- Todas as tarefas da story executadas e testadas
