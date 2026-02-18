@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
+import { EmpresaProvider } from "@/contexts/empresa-context"
 
 export const metadata: Metadata = {
   title: "DUO Governance - Gestão de Contratos",
@@ -19,7 +20,9 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className="antialiased">
         <AuthProvider>
-          {children}
+          <EmpresaProvider>
+            {children}
+          </EmpresaProvider>
         </AuthProvider>
       </body>
     </html>
