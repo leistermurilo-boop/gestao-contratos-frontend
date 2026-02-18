@@ -3,9 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   })
 
   const supabase = createServerClient(
@@ -18,66 +16,38 @@ export async function middleware(request: NextRequest) {
         },
         set(name: string, value: string, options: CookieOptions) {
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request: { headers: request.headers },
           })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
+          response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request: { headers: request.headers },
           })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
+          response.cookies.set({ name, value: '', ...options })
         },
       },
     }
   )
 
-  // Refresh session if expired - required for Server Components
+  // Refresh session if expired
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Rotas públicas (não requerem autenticação)
-  const publicRoutes = ['/login', '/register', '/recuperar-senha', '/']
-  const isPublicRoute = publicRoutes.some(route =>
-    request.nextUrl.pathname.startsWith(route)
-  )
+  // Define rotas públicas (não requerem autenticação)
+  const isPublicRoute =
+    request.nextUrl.pathname === '/' ||
+    request.nextUrl.pathname.startsWith('/login') ||
+    request.nextUrl.pathname.startsWith('/register') ||
+    request.nextUrl.pathname.startsWith('/recuperar-senha')
 
-  // Se estiver em rota pública e já autenticado, redirecionar para dashboard
-  if (isPublicRoute && request.nextUrl.pathname.startsWith('/login')) {
-    if (session) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-    return response
+  // Se em /login e já autenticado → redireciona para dashboard
+  if (request.nextUrl.pathname.startsWith('/login') && session) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Rotas protegidas requerem autenticação
+  // Se rota protegida e não autenticado → redireciona para login
   if (!isPublicRoute && !session) {
     return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // ⚠️ CRÍTICO: Verificar se usuário está ativo
-  if (session) {
-    const { data: usuario } = await supabase
-      .from('usuarios')
-      .select('ativo, perfil')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!usuario?.ativo) {
-      await supabase.auth.signOut()
-      return NextResponse.redirect(new URL('/login?error=inactive', request.url))
-    }
   }
 
   return response
@@ -85,13 +55,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (svg, png, jpg, jpeg, gif, webp)
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
