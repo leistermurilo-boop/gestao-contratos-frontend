@@ -1,61 +1,45 @@
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
+import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient()
+
+  // Testar conexão com query simples
+  const { data: empresas, error } = await supabase
+    .from('empresas')
+    .select('id, nome')
+    .limit(1)
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 gap-8 bg-gray-50">
-      {/* ⭐ Logo DUO Governance */}
-      <div className="mb-8">
-        <Image
-          src="/logo.svg"
-          alt="DUO Governance"
-          width={240}
-          height={60}
-          className="h-15 w-auto"
-          priority
-        />
-      </div>
-
-      <Card className="w-[400px]">
+    <main className="flex min-h-screen flex-col items-center justify-center p-24 gap-8">
+      <Card className="w-[500px]">
         <CardHeader>
-          <CardTitle className="text-brand-navy">Gestão de Contratos</CardTitle>
-          <CardDescription>Sistema de gestão multi-tenant com Supabase</CardDescription>
+          <CardTitle>Teste de Conexão Supabase</CardTitle>
+          <CardDescription>Sistema de Gestão de Contratos</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="seu@email.com" />
+          {error ? (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-800 font-semibold">❌ Erro na conexão:</p>
+              <p className="text-xs text-red-600 mt-1">{error.message}</p>
+            </div>
+          ) : (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-800 font-semibold">✅ Conexão estabelecida!</p>
+              {empresas && empresas.length > 0 && (
+                <p className="text-xs text-green-600 mt-1">
+                  Empresa encontrada: {empresas[0].nome}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>📡 URL: {process.env.NEXT_PUBLIC_SUPABASE_URL}</p>
+            <p>🔑 Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20)}...</p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <Input id="password" type="password" placeholder="••••••••" />
-          </div>
-          <Button className="w-full bg-brand-emerald hover:bg-brand-emerald/90">
-            Entrar
-          </Button>
         </CardContent>
       </Card>
-
-      <div className="flex gap-2">
-        <Button variant="default">Default</Button>
-        <Button variant="secondary">Secondary</Button>
-        <Button variant="destructive">Destructive</Button>
-        <Button variant="outline">Outline</Button>
-        <Button variant="ghost">Ghost</Button>
-      </div>
-
-      {/* ⭐ Teste de cores da marca */}
-      <div className="flex gap-4 mt-8">
-        <div className="w-24 h-24 bg-brand-navy rounded-lg flex items-center justify-center text-white text-xs">
-          Navy
-        </div>
-        <div className="w-24 h-24 bg-brand-emerald rounded-lg flex items-center justify-center text-white text-xs">
-          Emerald
-        </div>
-      </div>
     </main>
   )
 }

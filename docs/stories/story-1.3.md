@@ -389,17 +389,17 @@ export default async function Home() {
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] `lib/supabase/client.ts` criado (cliente browser)
-- [ ] `lib/supabase/server.ts` criado (cliente server)
-- [ ] `middleware.ts` criado na raiz do projeto
-- [ ] Middleware verifica autenticação e redireciona corretamente
-- [ ] Middleware verifica `usuario.ativo` antes de permitir acesso
-- [ ] `types/database.types.ts` gerado com types do Supabase
-- [ ] Página de teste criada em `app/page.tsx`
-- [ ] **Teste:** `npm run dev` inicia sem erros
-- [ ] **Teste:** Página exibe "✅ Conexão estabelecida!" e nome de uma empresa
-- [ ] **Teste:** Acesso a rotas protegidas redireciona para `/login`
-- [ ] **Teste:** Query no Supabase retorna dados (sem erro de RLS)
+- [x] `lib/supabase/client.ts` criado (cliente browser)
+- [x] `lib/supabase/server.ts` criado (cliente server)
+- [x] `middleware.ts` criado na raiz do projeto
+- [x] Middleware verifica autenticação e redireciona corretamente
+- [x] Middleware verifica `usuario.ativo` antes de permitir acesso
+- [x] `types/database.types.ts` gerado com types do Supabase
+- [x] Página de teste criada em `app/page.tsx`
+- [x] **Teste:** `npm run dev` inicia sem erros
+- [x] **Teste:** Página exibe "✅ Conexão estabelecida!" e nome de uma empresa
+- [x] **Teste:** Acesso a rotas protegidas redireciona para `/login`
+- [x] **Teste:** Query no Supabase retorna dados (sem erro de RLS)
 
 ---
 
@@ -458,5 +458,34 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Completed
 **Criado por:** @sm (River) - 2026-02-13
+**Implementado por:** @dev (Dex) - 2026-02-18
+
+---
+
+## 📝 Dev Agent Record
+
+### Completion Notes:
+- Cliente Supabase (browser) criado em lib/supabase/client.ts
+- Cliente Supabase (server) criado em lib/supabase/server.ts
+- Middleware de autenticação criado na raiz do projeto
+- Middleware verifica sessão e usuario.ativo
+- Types do database criados manualmente (Supabase CLI não instalado)
+- Página de teste de conexão implementada
+- Servidor dev testado e funcionando
+- Conexão com Supabase validada (query funciona)
+
+### File List:
+- `frontend/lib/supabase/client.ts` - Cliente browser
+- `frontend/lib/supabase/server.ts` - Cliente server
+- `frontend/middleware.ts` - Auth middleware
+- `frontend/types/database.types.ts` - Types do database
+- `frontend/app/page.tsx` - Página de teste de conexão
+
+### Change Log:
+- 2026-02-18: Setup completo do Supabase Client
+- Clientes browser e server configurados com @supabase/ssr
+- Middleware implementado com verificação de usuario.ativo
+- Types criados manualmente (empresas, usuarios, contratos)
+- Página de teste validando conexão com backend
