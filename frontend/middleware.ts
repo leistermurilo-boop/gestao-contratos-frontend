@@ -30,26 +30,52 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session if expired
+  // 1. Refresh session if expired
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Define rotas públicas (não requerem autenticação)
+  // 2. Define rotas públicas (não requerem autenticação)
   const isPublicRoute =
     request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/register') ||
     request.nextUrl.pathname.startsWith('/recuperar-senha')
 
-  // Se em /login e já autenticado → redireciona para dashboard
+  // 3. Se em /login e já autenticado → redireciona para dashboard
   if (request.nextUrl.pathname.startsWith('/login') && session) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Se rota protegida e não autenticado → redireciona para login
+  // 4. Se rota protegida e não autenticado → redireciona para login com redirect param
   if (!isPublicRoute && !session) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
   }
 
+  // 5. ⚠️ CRÍTICO: Verificar usuario.ativo em TODA request autenticada
+  if (session) {
+    const { data: usuario, error } = await supabase
+      .from('usuarios')
+      .select('ativo')
+      .eq('id', session.user.id)
+      .single()
+
+    // Erro de banco ou RLS → signOut + redirect com error=db
+    if (error || !usuario) {
+      console.error('Erro ao verificar usuário:', error)
+      await supabase.auth.signOut()
+      return NextResponse.redirect(new URL('/login?error=db', request.url))
+    }
+
+    // Usuário inativo → signOut + redirect com error=inactive
+    if (!usuario.ativo) {
+      console.warn('Usuário inativo tentou acessar:', session.user.id)
+      await supabase.auth.signOut()
+      return NextResponse.redirect(new URL('/login?error=inactive', request.url))
+    }
+  }
+
+  // 6. Retornar response
   return response
 }
 
