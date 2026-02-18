@@ -258,16 +258,17 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { usuario, loading } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !usuario) {
+    // Redirecionar se não há sessão (após loading)
+    if (!loading && !user) {
       router.push('/login')
     }
-  }, [loading, usuario, router])
+  }, [loading, user, router])
 
-  // Mostrar spinner enquanto carrega
+  // Bloquear render enquanto carrega
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -277,35 +278,20 @@ export default function DashboardLayout({
   }
 
   // Bloquear render se não autenticado
-  if (!usuario) {
+  if (!user) {
     return null
   }
 
-  // Bloquear render se usuário inativo
-  if (!usuario.ativo) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="max-w-md p-6 bg-red-50 border border-red-200 rounded-lg">
-          <h2 className="text-lg font-semibold text-red-800 mb-2">
-            Acesso Negado
-          </h2>
-          <p className="text-sm text-red-600">
-            Sua conta está inativa. Entre em contato com o administrador.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
+  // ✅ Render protegido (usuario.ativo já foi validado no AuthContext)
   return <>{children}</>
 }
 ```
 
 **Por que isso é crítico:**
 - ✅ Evita flash de conteúdo protegido antes do auth validar
-- ✅ Bloqueia render até loading=false e usuario!=null
+- ✅ Bloqueia render até loading=false e user!=null
 - ✅ Redireciona para login se não autenticado
-- ✅ Exibe mensagem clara se usuário inativo
+- ✅ Não duplica regra de `usuario.ativo` (AuthContext já trata isso)
 - ✅ Todas as páginas dentro de `app/(dashboard)/` ficam protegidas automaticamente
 
 ### 4. Criar Hook de Teste
@@ -392,7 +378,7 @@ export default function TestAuthPage() {
 - [ ] `app/(dashboard)/layout.tsx` criado (Protected Dashboard Layout)
 - [ ] Protected layout exibe spinner enquanto loading=true
 - [ ] Protected layout bloqueia render se não autenticado (retorna null)
-- [ ] Protected layout exibe mensagem de erro se usuario.ativo=false
+- [ ] Protected layout usa `user` (sessão) em vez de `usuario` (evita duplicação)
 - [ ] **Teste:** Login com usuário ativo exibe dados corretos
 - [ ] **Teste:** Login com usuário inativo redireciona para /login?error=inactive
 - [ ] **Teste:** signOut limpa state e redireciona
