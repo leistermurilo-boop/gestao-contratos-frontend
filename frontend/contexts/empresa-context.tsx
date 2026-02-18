@@ -32,18 +32,18 @@ export function EmpresaProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
 
   const loadEmpresa = async () => {
-    if (!usuario?.empresa_id) {
+    if (!usuario) {
       setEmpresa(null)
       setLoading(false)
       return
     }
 
     try {
-      // ⚠️ REGRA RLS: Não passar empresa_id - RLS filtra automaticamente
+      // ⚠️ REGRA RLS: Banco decide isolamento via user_belongs_to_empresa(id)
+      // Query sem filtro empresa_id - RLS retorna apenas empresa permitida
       const { data, error } = await supabase
         .from('empresas')
         .select('*')
-        .eq('id', usuario.empresa_id)
         .single()
 
       if (error) {
