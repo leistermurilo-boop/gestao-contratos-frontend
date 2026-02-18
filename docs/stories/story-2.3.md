@@ -2,7 +2,7 @@
 
 **Tipo:** Feature
 **Prioridade:** Crítica
-**Estimativa:** 1 hora
+**Estimativa:** 2 horas
 **Responsável:** @dev
 
 ---
@@ -27,6 +27,126 @@ Validar e testar o middleware de autenticação já criado na Story 1.3, garanti
 frontend/
 └── middleware.ts                  # ✏️ Validar e ajustar se necessário
 ```
+
+---
+
+## ⚠️ Requisitos Críticos de Segurança
+
+### 1️⃣ Verificação Obrigatória de usuario.ativo
+
+**Regra:** Após validar sessão, middleware DEVE consultar `usuarios.ativo` em TODA request autenticada.
+
+**Implementação:**
+```typescript
+if (session) {
+  const { data: usuario, error } = await supabase
+    .from('usuarios')
+    .select('ativo')
+    .eq('id', session.user.id)
+    .single()
+
+  if (error) {
+    await supabase.auth.signOut()
+    return NextResponse.redirect(new URL('/login?error=db', request.url))
+  }
+
+  if (!usuario?.ativo) {
+    await supabase.auth.signOut()
+    return NextResponse.redirect(new URL('/login?error=inactive', request.url))
+  }
+}
+```
+
+**Tratamento de Erros:**
+- `error` → signOut + redirect `/login?error=db`
+- `ativo = false` → signOut + redirect `/login?error=inactive`
+
+---
+
+### 2️⃣ Preservação de Rota Original (redirect param)
+
+**Regra:** Quando usuário não autenticado tenta acessar rota protegida, preservar URL original para redirect pós-login.
+
+**Implementação:**
+```typescript
+if (!isPublicRoute && !session) {
+  const redirectUrl = new URL('/login', request.url)
+  redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+  return NextResponse.redirect(redirectUrl)
+}
+```
+
+**Exemplo:**
+- Usuário acessa `/dashboard/contratos`
+- Redireciona para `/login?redirect=/dashboard/contratos`
+- Após login, redireciona de volta para `/dashboard/contratos`
+
+---
+
+### 3️⃣ Ordem de Execução Obrigatória
+
+**Sequência que DEVE ser seguida:**
+
+```
+1. Refresh session (supabase.auth.getSession())
+2. Detectar rota pública (check publicRoutes)
+3. Se autenticado em /login → redirect /dashboard
+4. Se rota protegida e sem sessão → redirect /login?redirect=<rota>
+5. Se houver sessão → verificar usuario.ativo
+6. Retornar response
+```
+
+**Crítico:** Ordem incorreta pode causar:
+- Loops infinitos
+- Bypass de verificação de ativo
+- Perda de redirect param
+
+---
+
+### 4️⃣ Garantia de Compatibilidade com RLS
+
+**Requisito de Banco:** Tabela `usuarios` DEVE ter policy SELECT:
+
+```sql
+CREATE POLICY "usuarios_select_own"
+ON usuarios FOR SELECT
+USING (id = auth.uid());
+```
+
+**Sem essa policy:** Middleware falhará com erro `error=db` porque não conseguirá verificar `usuario.ativo`.
+
+**Responsabilidade:** Backend deve garantir policy antes de frontend usar middleware.
+
+---
+
+### 5️⃣ Limitações do Middleware
+
+**O middleware NÃO deve:**
+- ❌ Conter lógica de empresa (isolamento é RLS)
+- ❌ Implementar RBAC (autorização por perfil)
+- ❌ Fazer queries complexas além de `usuarios.ativo`
+
+**O middleware DEVE:**
+- ✅ Apenas autenticar (session existe?)
+- ✅ Verificar usuario.ativo (usuário habilitado?)
+- ✅ Redirecionar corretamente
+- ✅ Tratar erros de banco explicitamente
+
+**Rationale:** Middleware executa em TODAS as requests. Lógica pesada degrada performance.
+
+---
+
+### 6️⃣ Tratamento Explícito de Erros de Banco
+
+**Cenários de erro que DEVEM ser tratados:**
+
+| Erro | Causa | Tratamento |
+|------|-------|------------|
+| `error` na query | RLS bloqueou, banco offline, policy faltando | signOut + `/login?error=db` |
+| `usuario = null` | Usuário não existe em `usuarios` | signOut + `/login?error=db` |
+| `ativo = false` | Usuário desativado por admin | signOut + `/login?error=inactive` |
+
+**Nunca deixar usuário sem feedback!**
 
 ---
 
@@ -213,18 +333,34 @@ export default function LoginPage() {
 
 ## ✅ Critérios de Aceitação (Done When...)
 
+### Implementação:
 - [ ] `middleware.ts` validado e funcional
 - [ ] Rotas públicas: `/login`, `/register`, `/recuperar-senha`, `/`
 - [ ] Rotas protegidas exigem autenticação
-- [ ] **Verificação de usuario.ativo implementada**
+- [ ] **Verificação de usuario.ativo implementada em TODA request autenticada**
 - [ ] Usuário inativo é deslogado e redirecionado
 - [ ] Matcher exclui arquivos estáticos e imagens
-- [ ] Mensagens de erro exibidas no login
-- [ ] **Teste:** Acesso a `/dashboard` sem login redireciona para `/login`
+- [ ] Mensagens de erro exibidas no login (error=db, error=inactive)
+- [ ] Redirect param preserva rota original (`/login?redirect=<rota>`)
+- [ ] Ordem de execução segue sequência obrigatória (6 passos)
+
+### Testes Funcionais:
+- [ ] **Teste:** Acesso a `/dashboard` sem login redireciona para `/login?redirect=/dashboard`
 - [ ] **Teste:** Acesso a `/login` autenticado redireciona para `/dashboard`
-- [ ] **Teste:** Usuário inativo redireciona com mensagem de erro
+- [ ] **Teste:** Usuário inativo é automaticamente deslogado em qualquer rota protegida
+- [ ] **Teste:** Erro de banco (RLS) redireciona com `/login?error=db`
 - [ ] **Teste:** Sessão refresh funciona automaticamente
 - [ ] **Teste:** Arquivos estáticos (_next, imagens) não passam pelo middleware
+
+### Testes de Segurança:
+- [ ] **Teste Crítico:** usuario.ativo verificado em TODA request autenticada
+- [ ] **Teste Crítico:** Usuário inativo não consegue acessar nenhuma rota protegida
+- [ ] **Teste Crítico:** Erro de banco não permite bypass de verificação
+- [ ] **Teste Crítico:** Redirect param não pode ser manipulado para XSS/open redirect
+
+### Compatibilidade RLS:
+- [ ] **Validar:** Policy SELECT em `usuarios` permite `id = auth.uid()`
+- [ ] **Validar:** Query de usuario.ativo funciona sem erro RLS
 
 ---
 
@@ -238,12 +374,31 @@ export default function LoginPage() {
 
 ## 📝 Notas para @dev
 
+### 🚨 ATENÇÃO: Middleware Atual Precisa Refatoração
+
+**Status do middleware.ts atual:**
+- Foi criado na Story 1.3
+- Foi REFATORADO para remover verificação de usuario.ativo (performance)
+- Atualmente NÃO verifica usuario.ativo em cada request
+- Essa story RESTAURA a verificação (requisito de segurança)
+
+**Você precisará:**
+1. Ler o middleware.ts atual
+2. Adicionar novamente verificação de usuario.ativo
+3. Adicionar redirect param
+4. Seguir ordem de execução obrigatória
+5. Tratar erros de banco explicitamente
+
+---
+
 ### ⚠️ Regras Críticas:
 
-1. **Sempre verificar usuario.ativo** - Segurança crítica
+1. **Sempre verificar usuario.ativo** - Segurança crítica em TODA request autenticada
 2. **Não bloquear arquivos estáticos** - Matcher correto
 3. **Refresh de sessão** - Obrigatório para Server Components
 4. **Error handling** - Nunca deixar usuário sem feedback
+5. **Preservar redirect param** - UX crítico para fluxo de login
+6. **Ordem de execução** - Seguir sequência obrigatória (6 passos)
 
 ### 🔍 Troubleshooting:
 
