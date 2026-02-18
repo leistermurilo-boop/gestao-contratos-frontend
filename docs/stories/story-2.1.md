@@ -365,6 +365,149 @@ export default function TestAuthPage() {
 
 ---
 
+## ⚠️ Pontos Técnicos Críticos para Implementação
+
+### 1️⃣ Ordem Correta no loadUser()
+
+A sequência DEVE ser exatamente esta:
+```typescript
+const loadUser = async () => {
+  try {
+    // 1. Buscar sessão
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (session?.user) {
+      // 2. Setar user primeiro
+      setUser(session.user)
+
+      // 3. Buscar dados do usuário
+      const { data: usuarioData, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+
+      if (error) {
+        console.error('Erro ao buscar usuário:', error)
+        await supabase.auth.signOut()
+        setUser(null)
+        setUsuario(null)
+        return
+      }
+
+      // 4. Verificar se ativo
+      if (!usuarioData.ativo) {
+        console.warn('Usuário inativo:', usuarioData.email)
+        await supabase.auth.signOut()
+        setUser(null)
+        setUsuario(null)
+        router.push('/login?error=inactive')
+        return
+      }
+
+      // 5. Setar usuario apenas se tudo OK
+      setUsuario(usuarioData)
+    } else {
+      setUser(null)
+      setUsuario(null)
+    }
+  } catch (error) {
+    console.error('Erro ao carregar usuário:', error)
+    setUser(null)
+    setUsuario(null)
+  } finally {
+    // 6. SEMPRE setar loading=false (crítico!)
+    setLoading(false)
+  }
+}
+```
+
+**Por quê:** `setLoading(false)` no finally garante que nunca fica em loading infinito.
+
+---
+
+### 2️⃣ Evitar Loop Infinito no onAuthStateChange
+```typescript
+useEffect(() => {
+  loadUser()
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      // ✅ CORRETO: Apenas loadUser, sem lógica extra
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        await loadUser()
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setUsuario(null)
+      }
+    }
+  )
+
+  return () => {
+    subscription.unsubscribe()
+  }
+}, []) // ⚠️ Array de dependências VAZIO
+```
+
+**Por quê:** Dependências vazias evitam re-execução e loop infinito.
+
+---
+
+### 3️⃣ Ordem no signIn() para Evitar Race Condition
+```typescript
+const signIn = async (email: string, password: string) => {
+  // 1. Fazer login
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) {
+    throw error
+  }
+
+  // 2. Verificar se usuário está ativo (ANTES de carregar tudo)
+  if (data.user) {
+    const { data: usuarioData } = await supabase
+      .from('usuarios')
+      .select('ativo')
+      .eq('id', data.user.id)
+      .single()
+
+    if (!usuarioData?.ativo) {
+      await supabase.auth.signOut()
+      throw new Error('Usuário inativo. Entre em contato com o administrador.')
+    }
+  }
+
+  // 3. DEPOIS carregar usuário completo
+  await loadUser()
+
+  // 4. DEPOIS redirecionar
+  router.push('/dashboard')
+}
+```
+
+**Por quê:** Ordem correta evita redirecionar usuário inativo para dashboard.
+
+---
+
+## 🔍 Troubleshooting Comum
+
+**Loop infinito de renders:**
+- Verificar dependencies do useEffect (devem estar vazias)
+- Não chamar loadUser dentro de onAuthStateChange desnecessariamente
+
+**Loading nunca termina:**
+- Garantir `setLoading(false)` está no bloco finally
+- Verificar se não há erro que impede chegada ao finally
+
+**Usuário inativo consegue acessar dashboard:**
+- Verificar ordem no signIn() (validação antes de loadUser)
+- Verificar AuthContext verifica ativo no loadUser
+
+---
+
 ## ✅ Critérios de Aceitação (Done When...)
 
 - [ ] `contexts/auth-context.tsx` criado com AuthProvider
@@ -378,7 +521,9 @@ export default function TestAuthPage() {
 - [ ] `app/(dashboard)/layout.tsx` criado (Protected Dashboard Layout)
 - [ ] Protected layout exibe spinner enquanto loading=true
 - [ ] Protected layout bloqueia render se não autenticado (retorna null)
-- [ ] Protected layout usa `user` (sessão) em vez de `usuario` (evita duplicação)
+- [ ] **Teste Crítico:** loadUser() sempre executa setLoading(false) (verificar no finally)
+- [ ] **Teste Crítico:** onAuthStateChange não causa loop infinito (dependencies=[])
+- [ ] **Teste Crítico:** signIn() valida usuario.ativo ANTES de redirecionar para dashboard
 - [ ] **Teste:** Login com usuário ativo exibe dados corretos
 - [ ] **Teste:** Login com usuário inativo redireciona para /login?error=inactive
 - [ ] **Teste:** signOut limpa state e redireciona
