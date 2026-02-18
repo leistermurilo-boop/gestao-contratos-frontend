@@ -2,7 +2,7 @@
 
 **Tipo:** Feature
 **Prioridade:** Crítica
-**Estimativa:** 3 horas
+**Estimativa:** 4 horas
 **Responsável:** @dev
 
 ---
@@ -27,7 +27,9 @@ frontend/
 ├── contexts/
 │   └── auth-context.tsx           # ✅ Contexto de autenticação
 └── app/
-    └── layout.tsx                 # ✏️ Modificar (adicionar AuthProvider)
+    ├── layout.tsx                 # ✏️ Modificar (adicionar AuthProvider)
+    └── (dashboard)/
+        └── layout.tsx             # ✅ Protected Dashboard Layout
 ```
 
 ---
@@ -240,7 +242,73 @@ export default function RootLayout({
 }
 ```
 
-### 3. Criar Hook de Teste
+### 3. Criar Protected Dashboard Layout (CRÍTICO)
+
+Criar `frontend/app/(dashboard)/layout.tsx` para bloquear render até auth validar:
+
+```typescript
+'use client'
+
+import { useAuth } from '@/contexts/auth-context'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const { usuario, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && !usuario) {
+      router.push('/login')
+    }
+  }, [loading, usuario, router])
+
+  // Mostrar spinner enquanto carrega
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-navy"></div>
+      </div>
+    )
+  }
+
+  // Bloquear render se não autenticado
+  if (!usuario) {
+    return null
+  }
+
+  // Bloquear render se usuário inativo
+  if (!usuario.ativo) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="max-w-md p-6 bg-red-50 border border-red-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-red-800 mb-2">
+            Acesso Negado
+          </h2>
+          <p className="text-sm text-red-600">
+            Sua conta está inativa. Entre em contato com o administrador.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
+```
+
+**Por que isso é crítico:**
+- ✅ Evita flash de conteúdo protegido antes do auth validar
+- ✅ Bloqueia render até loading=false e usuario!=null
+- ✅ Redireciona para login se não autenticado
+- ✅ Exibe mensagem clara se usuário inativo
+- ✅ Todas as páginas dentro de `app/(dashboard)/` ficam protegidas automaticamente
+
+### 4. Criar Hook de Teste
 
 Criar página de teste temporária em `frontend/app/test-auth/page.tsx`:
 
@@ -321,10 +389,16 @@ export default function TestAuthPage() {
 - [ ] Usuário inativo é deslogado automaticamente
 - [ ] State de loading funciona corretamente
 - [ ] onAuthStateChange escuta mudanças de sessão
+- [ ] `app/(dashboard)/layout.tsx` criado (Protected Dashboard Layout)
+- [ ] Protected layout exibe spinner enquanto loading=true
+- [ ] Protected layout bloqueia render se não autenticado (retorna null)
+- [ ] Protected layout exibe mensagem de erro se usuario.ativo=false
 - [ ] **Teste:** Login com usuário ativo exibe dados corretos
 - [ ] **Teste:** Login com usuário inativo redireciona para /login?error=inactive
 - [ ] **Teste:** signOut limpa state e redireciona
 - [ ] **Teste:** Página /test-auth exibe dados do usuário autenticado
+- [ ] **Teste:** Acessar rota /dashboard/* sem auth mostra spinner → redireciona para /login
+- [ ] **Teste:** Não há flash de conteúdo protegido antes da validação
 
 ---
 
