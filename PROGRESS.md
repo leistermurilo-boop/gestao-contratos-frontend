@@ -188,10 +188,10 @@ docs/
 - [x] Story 2.3: Middleware de Autenticação - ✅ **Ready for Review**
 - [x] Story 2.4: Páginas de Autenticação - ✅ **Ready for Review**
 
-### ⏳ Fase 3: Layout (EM ANDAMENTO - 33%)
+### ✅ Fase 3: Layout (COMPLETO - 100%)
 - [x] Story 3.1: Dashboard Layout - ✅ **Concluída 2026-02-19**
 - [x] Story 3.2: Sistema de Permissões - ✅ **Concluída 2026-02-19**
-- [ ] Story 3.3: Componentes Comuns - ⏳ **Aguardando implementação**
+- [x] Story 3.3: Componentes Comuns - ✅ **Concluída 2026-02-19**
 
 ### ⏳ Fase 4: Services (PENDENTE - 0%)
 - [ ] Story 4.1-4.6: Services Layer - ⏳ **Aguardando implementação**

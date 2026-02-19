@@ -16,7 +16,7 @@ Criar componentes reutilizáveis comuns: loading spinner, empty state, page head
 ## 📋 Pré-requisitos
 
 - [x] **Story 3.2 concluída:** Sistema de permissões implementado
-- [ ] shadcn/ui componentes instalados: badge, skeleton
+- [x] shadcn/ui componentes instalados: badge, skeleton
 
 ---
 
@@ -415,18 +415,18 @@ npx shadcn-ui@latest add skeleton
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] LoadingSpinner criado com variantes de tamanho
-- [ ] EmptyState criado com ícone e ação opcional
-- [ ] PageHeader criado com título e ação
-- [ ] StatusBadge criado com todos status
-- [ ] MargemIndicator criado com cores baseadas em threshold
-- [ ] ErrorBoundary criado (class component)
-- [ ] Todos componentes responsivos
-- [ ] **Teste:** LoadingSpinner exibe corretamente
-- [ ] **Teste:** EmptyState exibe mensagem e botão
-- [ ] **Teste:** MargemIndicator mostra vermelho/amarelo/verde correto
-- [ ] **Teste:** StatusBadge renderiza todos status
-- [ ] **Teste:** ErrorBoundary captura erros de componentes filhos
+- [x] LoadingSpinner criado com variantes de tamanho
+- [x] EmptyState criado com ícone e ação opcional
+- [x] PageHeader criado com título e ação
+- [x] StatusBadge criado com todos status
+- [x] MargemIndicator criado com cores baseadas em threshold
+- [x] ErrorBoundary criado (class component)
+- [x] Todos componentes responsivos
+- [x] **Teste:** LoadingSpinner exibe corretamente
+- [x] **Teste:** EmptyState exibe mensagem e botão
+- [x] **Teste:** MargemIndicator mostra vermelho/amarelo/verde correto
+- [x] **Teste:** StatusBadge renderiza todos status
+- [x] **Teste:** ErrorBoundary captura erros de componentes filhos
 
 ---
 
@@ -463,5 +463,5 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Concluída - 2026-02-19
 **Criado por:** @sm (River) - 2026-02-13
