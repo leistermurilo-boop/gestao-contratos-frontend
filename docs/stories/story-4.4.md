@@ -416,17 +416,17 @@ export function FileUpload({
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] Constantes de buckets criadas
-- [ ] UploadService criado com validações
-- [ ] **REGRA: Path obrigatório empresa_id/filename**
-- [ ] Validação de extensões e tamanho implementada
-- [ ] Hook useUpload criado
-- [ ] Componente FileUpload criado com drag & drop
-- [ ] Progress indicator funcional
-- [ ] **Teste:** Upload com path inválido falha
-- [ ] **Teste:** Upload com path correto funciona
-- [ ] **Teste:** Validações de extensão e tamanho funcionam
-- [ ] **Teste:** Download cria arquivo no navegador
+- [x] Constantes de buckets criadas
+- [x] UploadService criado com validações
+- [x] **REGRA: Path obrigatório empresa_id/filename**
+- [x] Validação de extensões e tamanho implementada
+- [x] Hook useUpload criado
+- [x] Componente FileUpload criado com drag & drop
+- [x] Progress indicator funcional
+- [x] **Teste:** Upload com path inválido falha
+- [x] **Teste:** Upload com path correto funciona
+- [x] **Teste:** Validações de extensão e tamanho funcionam
+- [x] **Teste:** Download cria arquivo no navegador
 
 ---
 
@@ -454,5 +454,5 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Concluída - 2026-02-19
 **Criado por:** @sm (River) - 2026-02-13
