@@ -328,14 +328,14 @@ export function useAF() {
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] Schema de validação criado
-- [ ] AFService criado com métodos CRUD
-- [ ] **REGRA: Validação de saldo antes de criar AF**
-- [ ] getPendentes() implementado
-- [ ] Hook useAF criado
-- [ ] **Teste:** create() valida saldo disponível
-- [ ] **Teste:** Erro se quantidade > saldo
-- [ ] **Teste:** getPendentes() retorna apenas AFs com saldo > 0
+- [x] Schema de validação criado
+- [x] AFService criado com métodos CRUD
+- [x] **REGRA: Validação de saldo antes de criar AF**
+- [x] getPendentes() implementado
+- [x] Hook useAF criado
+- [x] **Teste:** create() valida saldo disponível
+- [x] **Teste:** Erro se quantidade > saldo
+- [x] **Teste:** getPendentes() retorna apenas AFs com saldo > 0
 
 ---
 
@@ -362,5 +362,5 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Concluída - 2026-02-19
 **Criado por:** @sm (River) - 2026-02-13
