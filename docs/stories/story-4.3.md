@@ -261,15 +261,15 @@ export function useCustos() {
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] Schema de validação criado
-- [ ] CustosService criado
-- [ ] **REGRA: Verificação de perfil logística no hook**
-- [ ] **REGRA: Backend recalcula CMP e margem (não fazer no frontend)**
-- [ ] Hook useCustos com verificação de perfil
-- [ ] canAccess exposto pelo hook
-- [ ] **Teste:** Perfil logística não pode chamar métodos
-- [ ] **Teste:** Outros perfis podem acessar custos
-- [ ] **Teste:** create() registra custo e backend atualiza margem
+- [x] Schema de validação criado
+- [x] CustosService criado
+- [x] **REGRA: Verificação de perfil logística no hook**
+- [x] **REGRA: Backend recalcula CMP e margem (não fazer no frontend)**
+- [x] Hook useCustos com verificação de perfil
+- [x] canAccess exposto pelo hook
+- [x] **Teste:** Perfil logística não pode chamar métodos
+- [x] **Teste:** Outros perfis podem acessar custos
+- [x] **Teste:** create() registra custo e backend atualiza margem
 
 ---
 
@@ -297,5 +297,5 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Concluída - 2026-02-19
 **Criado por:** @sm (River) - 2026-02-13
