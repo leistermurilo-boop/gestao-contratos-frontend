@@ -16,7 +16,7 @@ Implementar sistema de permissões baseado em perfil com funções helpers e HOC
 ## 📋 Pré-requisitos
 
 - [x] **Story 3.1 concluída:** Dashboard Layout implementado
-- [ ] Constantes de perfis já criadas na arquitetura
+- [x] Constantes de perfis já criadas na arquitetura
 
 ---
 
@@ -282,18 +282,18 @@ export function usePermissions() {
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] `lib/constants/perfis.ts` criado com todos perfis
-- [ ] PERMISSIONS mapping criado corretamente
-- [ ] Helpers de permissão funcionais (canViewCosts, etc)
-- [ ] `lib/utils/permissions.ts` criado
-- [ ] ProtectedRoute HOC criado
-- [ ] **Logística bloqueado de ver custos**
-- [ ] Hook usePermissions funcional
-- [ ] Mensagem de "Acesso Negado" estilizada
-- [ ] **Teste:** Logística acessa /custos e vê mensagem de erro
-- [ ] **Teste:** Admin acessa todas páginas
-- [ ] **Teste:** canViewCosts retorna false para logística
-- [ ] **Teste:** ProtectedRoute redireciona corretamente
+- [x] `lib/constants/perfis.ts` criado com todos perfis
+- [x] PERMISSIONS mapping criado corretamente
+- [x] Helpers de permissão funcionais (canViewCosts, etc)
+- [x] `lib/utils/permissions.ts` criado
+- [x] ProtectedRoute HOC criado
+- [x] **Logística bloqueado de ver custos**
+- [x] Hook usePermissions funcional
+- [x] Mensagem de "Acesso Negado" estilizada
+- [x] **Teste:** Logística acessa /custos e vê mensagem de erro
+- [x] **Teste:** Admin acessa todas páginas
+- [x] **Teste:** canViewCosts retorna false para logística
+- [x] **Teste:** ProtectedRoute redireciona corretamente
 
 ---
 
@@ -331,5 +331,5 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Concluída - 2026-02-19
 **Criado por:** @sm (River) - 2026-02-13

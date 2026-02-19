@@ -4,8 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-
-type Perfil = 'admin' | 'juridico' | 'financeiro' | 'compras' | 'logistica'
+import { type Perfil } from '@/lib/constants/perfis'
 
 interface Usuario {
   id: string

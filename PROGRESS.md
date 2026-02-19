@@ -190,7 +190,7 @@ docs/
 
 ### ⏳ Fase 3: Layout (EM ANDAMENTO - 33%)
 - [x] Story 3.1: Dashboard Layout - ✅ **Concluída 2026-02-19**
-- [ ] Story 3.2: Sistema de Permissões - ⏳ **Aguardando implementação**
+- [x] Story 3.2: Sistema de Permissões - ✅ **Concluída 2026-02-19**
 - [ ] Story 3.3: Componentes Comuns - ⏳ **Aguardando implementação**
 
 ### ⏳ Fase 4: Services (PENDENTE - 0%)
