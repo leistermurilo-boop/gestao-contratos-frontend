@@ -1,0 +1,124 @@
+import { createClient } from '@/lib/supabase/client'
+import { type ItemContrato, type ItemContratoInsert, type ItemContratoUpdate } from '@/types/models'
+
+// Campos GENERATED ALWAYS e imutáveis — bloqueados do update (Decisão #3)
+type ItemContratoUpdateSeguro = Omit<
+  ItemContratoUpdate,
+  'empresa_id' | 'id' | 'contrato_id' | 'cnpj_id'
+>
+
+export interface ItemWithContrato extends ItemContrato {
+  contrato?: {
+    numero_contrato: string
+    orgao_publico: string
+  } | null
+}
+
+export class ItensService {
+  private get supabase() {
+    return createClient()
+  }
+
+  /**
+   * Buscar todos os itens de um contrato.
+   * ⚠️ REGRA RLS: empresa_id filtrado automaticamente (Decisão #1)
+   * ⚠️ REGRA SOFT DELETE: Filtrar deleted_at IS NULL (Decisão #5)
+   * ⚠️ REGRA: margem_atual, saldo_quantidade, valor_total vêm do backend — NUNCA recalcular (Decisão #3)
+   */
+  async getByContrato(contratoId: string): Promise<ItemContrato[]> {
+    const { data, error } = await this.supabase
+      .from('itens_contrato')
+      .select('*')
+      .eq('contrato_id', contratoId)
+      .is('deleted_at', null)
+      .order('numero_item', { ascending: true })
+
+    if (error) throw new Error(error.message)
+    return data ?? []
+  }
+
+  /**
+   * Buscar item por ID.
+   */
+  async getById(id: string): Promise<ItemContrato> {
+    const { data, error } = await this.supabase
+      .from('itens_contrato')
+      .select('*')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single()
+
+    if (error) throw new Error(error.message)
+    return data
+  }
+
+  /**
+   * Criar novo item de contrato.
+   * ⚠️ empresa_id e cnpj_id validados por trigger no banco — não recalcular
+   */
+  async create(item: ItemContratoInsert): Promise<ItemContrato> {
+    const { data, error } = await this.supabase
+      .from('itens_contrato')
+      .insert(item)
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+    return data
+  }
+
+  /**
+   * Atualizar item.
+   * ⚠️ REGRA: NUNCA enviar margem_atual, saldo_quantidade, valor_total — GENERATED ALWAYS (Decisão #3)
+   * Parâmetro tipado com Omit para bloquear campos imutáveis em compile-time.
+   */
+  async update(id: string, item: ItemContratoUpdateSeguro): Promise<ItemContrato> {
+    const { data, error } = await this.supabase
+      .from('itens_contrato')
+      .update(item)
+      .eq('id', id)
+      .is('deleted_at', null)
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+    return data
+  }
+
+  /**
+   * Soft delete — marca deleted_at.
+   * ⚠️ NUNCA hard delete (Decisão #5)
+   */
+  async softDelete(id: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('itens_contrato')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+
+    if (error) throw new Error(error.message)
+  }
+
+  /**
+   * Itens com margem abaixo do threshold (alerta disparado pelo trigger).
+   * ⚠️ margem_atual calculada pelo trigger atualizar_margem_item() — só exibir (Decisão #3)
+   */
+  async getWithMargemBaixa(): Promise<ItemWithContrato[]> {
+    const { data, error } = await this.supabase
+      .from('itens_contrato')
+      .select(`
+        *,
+        contrato:contratos (
+          numero_contrato,
+          orgao_publico
+        )
+      `)
+      .eq('margem_alerta_disparado', true)
+      .is('deleted_at', null)
+      .order('margem_atual', { ascending: true })
+
+    if (error) throw new Error(error.message)
+    return (data ?? []) as ItemWithContrato[]
+  }
+}
+
+export const itensService = new ItensService()

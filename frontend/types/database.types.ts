@@ -173,6 +173,7 @@ export interface Database {
           empresa_id: string
           contrato_id: string
           cnpj_id: string
+          numero_item: number | null
           descricao: string
           unidade: string
           quantidade: number
@@ -193,6 +194,7 @@ export interface Database {
           empresa_id?: string
           contrato_id: string
           cnpj_id: string
+          numero_item?: number | null
           descricao: string
           unidade: string
           quantidade: number
@@ -210,6 +212,7 @@ export interface Database {
           empresa_id?: string
           contrato_id?: string
           cnpj_id?: string
+          numero_item?: number | null
           descricao?: string
           unidade?: string
           quantidade?: number

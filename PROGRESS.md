@@ -195,7 +195,7 @@ docs/
 
 ### ⏳ Fase 4: Services (EM ANDAMENTO - 16%)
 - [x] Story 4.1: Contrato Service - ✅ **Concluída 2026-02-19**
-- [ ] Story 4.2: Item Service - ⏳ **Aguardando implementação**
+- [x] Story 4.2: Item Service - ✅ **Concluída 2026-02-19**
 - [ ] Story 4.3-4.6: Services Layer - ⏳ **Aguardando implementação**
 
 ---

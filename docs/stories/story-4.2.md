@@ -295,16 +295,16 @@ export function useItens() {
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] Schema de validação criado
-- [ ] ItensService criado com todos métodos
-- [ ] **REGRA: NUNCA recalcular margem_atual, CMP ou saldo**
-- [ ] **REGRA: Soft delete aplicado**
-- [ ] getWithMargemBaixa() implementado
-- [ ] Hook useItens criado
-- [ ] **Teste:** getByContrato() retorna itens do contrato
-- [ ] **Teste:** create() não tenta calcular margem
-- [ ] **Teste:** update() remove campos calculados
-- [ ] **Teste:** getWithMargemBaixa() retorna apenas alertas
+- [x] Schema de validação criado
+- [x] ItensService criado com todos métodos
+- [x] **REGRA: NUNCA recalcular margem_atual, CMP ou saldo**
+- [x] **REGRA: Soft delete aplicado**
+- [x] getWithMargemBaixa() implementado
+- [x] Hook useItens criado
+- [x] **Teste:** getByContrato() retorna itens do contrato
+- [x] **Teste:** create() não tenta calcular margem
+- [x] **Teste:** update() remove campos calculados
+- [x] **Teste:** getWithMargemBaixa() retorna apenas alertas
 
 ---
 
@@ -331,5 +331,5 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Concluída - 2026-02-19
 **Criado por:** @sm (River) - 2026-02-13
