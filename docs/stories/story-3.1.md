@@ -16,7 +16,7 @@ Criar layout principal do dashboard com sidebar de navegação, header e estrutu
 ## 📋 Pré-requisitos
 
 - [x] **Story 2.4 concluída:** Páginas de autenticação funcionais
-- [ ] shadcn/ui componentes instalados: separator, tooltip, dropdown-menu
+- [x] shadcn/ui componentes instalados: separator, tooltip, dropdown-menu
 
 ---
 
@@ -423,19 +423,19 @@ npx shadcn-ui@latest add dropdown-menu
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] Layout do dashboard criado com sidebar + header
-- [ ] Sidebar mostra rotas filtradas por perfil
-- [ ] **Custos ocultos para perfil logística**
-- [ ] Rotas admin visíveis apenas para admin
-- [ ] Header com menu dropdown funcional
-- [ ] Botão de logout funciona
-- [ ] Navegação responsiva (mobile menu)
-- [ ] Rota ativa destacada na sidebar
-- [ ] Nome da empresa exibido na sidebar
-- [ ] **Teste:** Perfil logística NÃO vê link "Custos"
-- [ ] **Teste:** Perfil admin vê rotas de administração
-- [ ] **Teste:** Menu mobile abre e fecha corretamente
-- [ ] **Teste:** Logout redireciona para /login
+- [x] Layout do dashboard criado com sidebar + header
+- [x] Sidebar mostra rotas filtradas por perfil
+- [x] **Custos ocultos para perfil logística**
+- [x] Rotas admin visíveis apenas para admin
+- [x] Header com menu dropdown funcional
+- [x] Botão de logout funciona
+- [x] Navegação responsiva (mobile menu)
+- [x] Rota ativa destacada na sidebar
+- [x] Nome da empresa exibido na sidebar
+- [x] **Teste:** Perfil logística NÃO vê link "Custos"
+- [x] **Teste:** Perfil admin vê rotas de administração
+- [x] **Teste:** Menu mobile abre e fecha corretamente
+- [x] **Teste:** Logout redireciona para /login
 
 ---
 
@@ -477,5 +477,5 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Concluída - 2026-02-19
 **Criado por:** @sm (River) - 2026-02-13

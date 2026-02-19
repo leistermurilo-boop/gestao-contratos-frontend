@@ -1,8 +1,8 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-02-18 (última atualização)
-**Sessão:** Implementação Stories 1.1 até 2.4 + Sistema de Validação
-**Agentes:** @dev (Dex) + @sm (River)
+**Data:** 2026-02-19 (última atualização)
+**Sessão:** Implementação Story 3.1 - Dashboard Layout
+**Agentes:** @analyst + @dev
 
 ---
 
@@ -188,8 +188,8 @@ docs/
 - [x] Story 2.3: Middleware de Autenticação - ✅ **Ready for Review**
 - [x] Story 2.4: Páginas de Autenticação - ✅ **Ready for Review**
 
-### ⏳ Fase 3: Layout (PENDENTE - 0%)
-- [ ] Story 3.1: Dashboard Layout - ⏳ **Aguardando implementação**
+### ⏳ Fase 3: Layout (EM ANDAMENTO - 33%)
+- [x] Story 3.1: Dashboard Layout - ✅ **Concluída 2026-02-19**
 - [ ] Story 3.2: Sistema de Permissões - ⏳ **Aguardando implementação**
 - [ ] Story 3.3: Componentes Comuns - ⏳ **Aguardando implementação**
 
@@ -198,24 +198,19 @@ docs/
 
 ---
 
-## 🎯 PRÓXIMO PASSO EXATO (AMANHÃ 19/02/2026)
+## 🎯 PRÓXIMO PASSO EXATO (Story 3.2)
 
-### 🚀 Iniciar Fase 3: Layout (Story 3.1)
+### 🚀 Story 3.2: Sistema de Permissões
 
-#### 1️⃣ Ler a Story 3.1 (Dashboard Layout)
-```bash
-cd C:\projetos\gestao-contratos\docs\stories
-code story-3.1.md
-```
+#### Story 3.1 Concluída — o que foi implementado:
+- Sidebar com `canAccessRoute()` — logística NÃO vê Custos/Reajustes
+- Header com DropdownMenu de usuário e logout
+- Layout responsivo (mobile sidebar overlay)
+- `lib/constants/routes.ts` com tipagem TypeScript explícita
+- Novos componentes UI: `separator.tsx`, `tooltip.tsx`, `dropdown-menu.tsx`, `alert.tsx`
+- 9 arquivos criados/modificados
 
-#### 2️⃣ O que será implementado na Story 3.1:
-- Layout principal do dashboard com Sidebar
-- Header com informações do usuário
-- Navegação entre módulos
-- Logout functionality
-- Responsividade mobile
-
-#### 3️⃣ Arquivos que serão criados:
+#### Arquivos que serão criados na Story 3.2:
 ```
 frontend/
 ├── components/
