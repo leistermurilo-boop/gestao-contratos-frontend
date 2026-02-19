@@ -64,6 +64,38 @@ export interface Database {
           updated_at?: string
         }
       }
+      cnpjs: {
+        Row: {
+          id: string
+          empresa_id: string
+          cnpj: string
+          razao_social: string
+          nome_fantasia: string | null
+          ativo: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id: string
+          cnpj: string
+          razao_social: string
+          nome_fantasia?: string | null
+          ativo?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          cnpj?: string
+          razao_social?: string
+          nome_fantasia?: string | null
+          ativo?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       contratos: {
         Row: {
           id: string
@@ -71,14 +103,327 @@ export interface Database {
           cnpj_id: string
           numero_contrato: string
           orgao_publico: string
+          cnpj_orgao: string | null
+          esfera: 'municipal' | 'estadual' | 'federal' | null
+          objeto: string | null
           valor_total: number
           data_assinatura: string
           data_vigencia_inicio: string
           data_vigencia_fim: string
+          prorrogado: boolean
+          data_vigencia_fim_prorrogacao: string | null
+          indice_reajuste: string | null
           status: 'ativo' | 'concluido' | 'rescindido' | 'suspenso' | 'arquivado'
+          deleted_at: string | null
+          deleted_by: string | null
+          anexo_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id?: string // ⚠️ NÃO passar — RLS injeta automaticamente (Decisão #1)
+          cnpj_id: string
+          numero_contrato: string
+          orgao_publico: string
+          cnpj_orgao?: string | null
+          esfera?: 'municipal' | 'estadual' | 'federal' | null
+          objeto?: string | null
+          valor_total: number
+          data_assinatura: string
+          data_vigencia_inicio: string
+          data_vigencia_fim: string
+          prorrogado?: boolean
+          data_vigencia_fim_prorrogacao?: string | null
+          indice_reajuste?: string | null
+          status?: 'ativo' | 'concluido' | 'rescindido' | 'suspenso' | 'arquivado'
+          deleted_at?: string | null
+          deleted_by?: string | null
+          anexo_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          cnpj_id?: string
+          numero_contrato?: string
+          orgao_publico?: string
+          cnpj_orgao?: string | null
+          esfera?: 'municipal' | 'estadual' | 'federal' | null
+          objeto?: string | null
+          valor_total?: number
+          data_assinatura?: string
+          data_vigencia_inicio?: string
+          data_vigencia_fim?: string
+          prorrogado?: boolean
+          data_vigencia_fim_prorrogacao?: string | null
+          indice_reajuste?: string | null
+          status?: 'ativo' | 'concluido' | 'rescindido' | 'suspenso' | 'arquivado'
+          deleted_at?: string | null
+          deleted_by?: string | null
+          anexo_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      itens_contrato: {
+        Row: {
+          id: string
+          empresa_id: string
+          contrato_id: string
+          cnpj_id: string
+          descricao: string
+          unidade: string
+          quantidade: number
+          quantidade_entregue: number
+          saldo_quantidade: number // GENERATED ALWAYS
+          valor_unitario: number
+          valor_total: number // GENERATED ALWAYS
+          custo_medio: number | null
+          ultimo_custo_unitario: number | null
+          margem_atual: number | null
+          margem_alerta_disparado: boolean
           deleted_at: string | null
           created_at: string
           updated_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id?: string
+          contrato_id: string
+          cnpj_id: string
+          descricao: string
+          unidade: string
+          quantidade: number
+          quantidade_entregue?: number
+          valor_unitario: number
+          custo_medio?: number | null
+          ultimo_custo_unitario?: number | null
+          margem_alerta_disparado?: boolean
+          deleted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          contrato_id?: string
+          cnpj_id?: string
+          descricao?: string
+          unidade?: string
+          quantidade?: number
+          quantidade_entregue?: number
+          valor_unitario?: number
+          custo_medio?: number | null
+          ultimo_custo_unitario?: number | null
+          margem_alerta_disparado?: boolean
+          deleted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      custos_item: {
+        Row: {
+          id: string
+          empresa_id: string
+          item_id: string
+          custo_unitario: number
+          quantidade: number
+          nf_entrada_url: string | null
+          observacao: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id?: string
+          item_id: string
+          custo_unitario: number
+          quantidade: number
+          nf_entrada_url?: string | null
+          observacao?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          item_id?: string
+          custo_unitario?: number
+          quantidade?: number
+          nf_entrada_url?: string | null
+          observacao?: string | null
+          created_at?: string
+        }
+      }
+      autorizacoes_fornecimento: {
+        Row: {
+          id: string
+          empresa_id: string
+          contrato_id: string
+          item_id: string
+          numero_af: string
+          quantidade_autorizada: number
+          quantidade_entregue: number
+          saldo_af: number // GENERATED ALWAYS
+          status: 'pendente' | 'parcial' | 'concluida' | 'cancelada'
+          data_emissao: string
+          data_vencimento: string | null
+          observacao: string | null
+          anexo_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id?: string
+          contrato_id: string
+          item_id: string
+          numero_af: string
+          quantidade_autorizada: number
+          quantidade_entregue?: number
+          status?: 'pendente' | 'parcial' | 'concluida' | 'cancelada'
+          data_emissao: string
+          data_vencimento?: string | null
+          observacao?: string | null
+          anexo_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          contrato_id?: string
+          item_id?: string
+          numero_af?: string
+          quantidade_autorizada?: number
+          quantidade_entregue?: number
+          status?: 'pendente' | 'parcial' | 'concluida' | 'cancelada'
+          data_emissao?: string
+          data_vencimento?: string | null
+          observacao?: string | null
+          anexo_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      entregas: {
+        Row: {
+          id: string
+          empresa_id: string
+          af_id: string
+          quantidade_entregue: number
+          data_entrega: string
+          nf_saida_numero: string | null
+          anexo_nf_url: string | null
+          observacao: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id?: string
+          af_id: string
+          quantidade_entregue: number
+          data_entrega: string
+          nf_saida_numero?: string | null
+          anexo_nf_url?: string | null
+          observacao?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          af_id?: string
+          quantidade_entregue?: number
+          data_entrega?: string
+          nf_saida_numero?: string | null
+          anexo_nf_url?: string | null
+          observacao?: string | null
+          created_at?: string
+        }
+      }
+      reajustes: {
+        Row: {
+          id: string
+          empresa_id: string
+          contrato_id: string
+          tipo: string
+          percentual: number
+          indice_referencia: string | null
+          data_referencia: string
+          data_aplicacao: string | null
+          status: 'solicitado' | 'analise' | 'aprovado' | 'rejeitado' | 'implementado'
+          justificativa: string | null
+          documentacao_url: string | null
+          aprovado_por: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id?: string
+          contrato_id: string
+          tipo: string
+          percentual: number
+          indice_referencia?: string | null
+          data_referencia: string
+          data_aplicacao?: string | null
+          status?: 'solicitado' | 'analise' | 'aprovado' | 'rejeitado' | 'implementado'
+          justificativa?: string | null
+          documentacao_url?: string | null
+          aprovado_por?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          contrato_id?: string
+          tipo?: string
+          percentual?: number
+          indice_referencia?: string | null
+          data_referencia?: string
+          data_aplicacao?: string | null
+          status?: 'solicitado' | 'analise' | 'aprovado' | 'rejeitado' | 'implementado'
+          justificativa?: string | null
+          documentacao_url?: string | null
+          aprovado_por?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      auditoria: {
+        Row: {
+          id: string
+          empresa_id: string
+          usuario_id: string | null
+          tabela: string
+          registro_id: string
+          acao: 'INSERT' | 'UPDATE' | 'DELETE'
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id: string
+          usuario_id?: string | null
+          tabela: string
+          registro_id: string
+          acao: 'INSERT' | 'UPDATE' | 'DELETE'
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          usuario_id?: string | null
+          tabela?: string
+          registro_id?: string
+          acao?: 'INSERT' | 'UPDATE' | 'DELETE'
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          created_at?: string
         }
       }
     }

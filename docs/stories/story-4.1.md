@@ -16,7 +16,7 @@ Criar service layer para operações de contratos (CRUD) com todas regras de neg
 ## 📋 Pré-requisitos
 
 - [x] **Story 3.3 concluída:** Componentes comuns criados
-- [ ] Types do Supabase gerados (`database.types.ts`)
+- [x] Types do Supabase gerados (`database.types.ts`)
 
 ---
 
@@ -368,19 +368,19 @@ export function useContratos() {
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] Schema de validação criado com Zod
-- [ ] Types de domínio criados em `models.ts`
-- [ ] ContratosService criado com todos métodos CRUD
-- [ ] **REGRA RLS: empresa_id NÃO passado manualmente**
-- [ ] **REGRA SOFT DELETE: Filtrar deleted_at IS NULL em SELECT**
-- [ ] softDelete implementado (atualiza deleted_at)
-- [ ] Hook useContratos criado
-- [ ] Toast notifications implementadas
-- [ ] Error handling em todos métodos
-- [ ] **Teste:** getAll() retorna apenas contratos não deletados
-- [ ] **Teste:** create() não passa empresa_id
-- [ ] **Teste:** softDelete() marca deleted_at
-- [ ] **Teste:** getExpiringSoon() retorna contratos próximos vencimento
+- [x] Schema de validação criado com Zod
+- [x] Types de domínio criados em `models.ts`
+- [x] ContratosService criado com todos métodos CRUD
+- [x] **REGRA RLS: empresa_id NÃO passado manualmente**
+- [x] **REGRA SOFT DELETE: Filtrar deleted_at IS NULL em SELECT**
+- [x] softDelete implementado (atualiza deleted_at)
+- [x] Hook useContratos criado
+- [x] Toast notifications implementadas
+- [x] Error handling em todos métodos
+- [x] **Teste:** getAll() retorna apenas contratos não deletados
+- [x] **Teste:** create() não passa empresa_id
+- [x] **Teste:** softDelete() marca deleted_at
+- [x] **Teste:** getExpiringSoon() retorna contratos próximos vencimento
 
 ---
 
@@ -419,5 +419,5 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Concluída - 2026-02-19
 **Criado por:** @sm (River) - 2026-02-13

@@ -193,8 +193,10 @@ docs/
 - [x] Story 3.2: Sistema de Permissões - ✅ **Concluída 2026-02-19**
 - [x] Story 3.3: Componentes Comuns - ✅ **Concluída 2026-02-19**
 
-### ⏳ Fase 4: Services (PENDENTE - 0%)
-- [ ] Story 4.1-4.6: Services Layer - ⏳ **Aguardando implementação**
+### ⏳ Fase 4: Services (EM ANDAMENTO - 16%)
+- [x] Story 4.1: Contrato Service - ✅ **Concluída 2026-02-19**
+- [ ] Story 4.2: Item Service - ⏳ **Aguardando implementação**
+- [ ] Story 4.3-4.6: Services Layer - ⏳ **Aguardando implementação**
 
 ---
 
