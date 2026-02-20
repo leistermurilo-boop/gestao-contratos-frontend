@@ -6,7 +6,8 @@ import { useAuth } from './auth-context'
 
 interface Empresa {
   id: string
-  nome: string
+  razao_social: string
+  nome_fantasia: string | null
   created_at: string
   updated_at: string
   config_json: {

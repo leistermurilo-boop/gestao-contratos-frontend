@@ -55,7 +55,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold leading-tight">DUO Governance</p>
             {empresa && (
-              <p className="mt-0.5 truncate text-xs text-white/50">{empresa.nome}</p>
+              <p className="mt-0.5 truncate text-xs text-white/50">{empresa.nome_fantasia ?? empresa.razao_social}</p>
             )}
           </div>
         </div>

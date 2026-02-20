@@ -12,21 +12,24 @@ export interface Database {
       empresas: {
         Row: {
           id: string
-          nome: string
+          razao_social: string
+          nome_fantasia: string | null
           created_at: string
           updated_at: string
           config_json: Json | null
         }
         Insert: {
           id?: string
-          nome: string
+          razao_social: string
+          nome_fantasia?: string | null
           created_at?: string
           updated_at?: string
           config_json?: Json | null
         }
         Update: {
           id?: string
-          nome?: string
+          razao_social?: string
+          nome_fantasia?: string | null
           created_at?: string
           updated_at?: string
           config_json?: Json | null
@@ -230,19 +233,25 @@ export interface Database {
         Row: {
           id: string
           empresa_id: string
-          item_id: string
+          item_contrato_id: string
+          data_lancamento: string
           custo_unitario: number
           quantidade: number
+          fornecedor: string | null
+          numero_nf: string | null
           nf_entrada_url: string | null
           observacao: string | null
           created_at: string
         }
         Insert: {
           id?: string
-          empresa_id?: string
-          item_id: string
+          empresa_id?: string // ⚠️ NÃO passar — RLS injeta (Decisão #1)
+          item_contrato_id: string
+          data_lancamento: string
           custo_unitario: number
           quantidade: number
+          fornecedor?: string | null
+          numero_nf?: string | null
           nf_entrada_url?: string | null
           observacao?: string | null
           created_at?: string
@@ -250,9 +259,12 @@ export interface Database {
         Update: {
           id?: string
           empresa_id?: string
-          item_id?: string
+          item_contrato_id?: string
+          data_lancamento?: string
           custo_unitario?: number
           quantidade?: number
+          fornecedor?: string | null
+          numero_nf?: string | null
           nf_entrada_url?: string | null
           observacao?: string | null
           created_at?: string

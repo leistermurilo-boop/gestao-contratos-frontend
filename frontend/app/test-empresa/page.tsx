@@ -33,7 +33,10 @@ export default function TestEmpresaPage() {
                     <p className="text-sm font-semibold text-blue-800">🏢 Dados da Empresa</p>
                     <div className="text-xs text-blue-700 space-y-1">
                       <p><strong>ID:</strong> {empresa.id}</p>
-                      <p><strong>Nome:</strong> {empresa.nome}</p>
+                      <p><strong>Razão Social:</strong> {empresa.razao_social}</p>
+                      {empresa.nome_fantasia && (
+                        <p><strong>Nome Fantasia:</strong> {empresa.nome_fantasia}</p>
+                      )}
                       <p><strong>Criada em:</strong> {new Date(empresa.created_at).toLocaleDateString('pt-BR')}</p>
                     </div>
                   </div>

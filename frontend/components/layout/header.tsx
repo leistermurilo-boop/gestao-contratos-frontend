@@ -37,7 +37,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       {/* Nome da empresa (mobile) */}
       <div className="min-w-0 flex-1 lg:hidden">
         {empresa && (
-          <p className="truncate text-sm font-medium text-slate-600">{empresa.nome}</p>
+          <p className="truncate text-sm font-medium text-slate-600">{empresa.nome_fantasia ?? empresa.razao_social}</p>
         )}
       </div>
 

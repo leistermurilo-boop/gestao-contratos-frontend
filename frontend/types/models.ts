@@ -11,7 +11,8 @@ export interface ContratoWithRelations extends Contrato {
     razao_social: string
   } | null
   empresa?: {
-    nome: string
+    razao_social: string
+    nome_fantasia: string | null
   } | null
 }
 
