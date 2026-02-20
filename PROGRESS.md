@@ -75,10 +75,12 @@ frontend/
 - [x] Story 5.2: Gráficos do Dashboard ← **CONCLUÍDA**
 - [x] Story 5.3: Alertas do Dashboard ← **CONCLUÍDA HOJE**
 
-### ⏳ Fase 6: Contratos (EM ANDAMENTO — ~20%)
-- [x] Story 6.1: Lista de Contratos ← **CONCLUÍDA HOJE**
-- [ ] Story 6.2: Formulário de Contrato ← **PRÓXIMA**
-- [ ] ...
+### ⏳ Fase 6: Contratos (EM ANDAMENTO — ~40%)
+- [x] Story 6.1: Lista de Contratos ← **CONCLUÍDA**
+- [x] Story 6.2: Criar Contrato ← **CONCLUÍDA HOJE**
+- [ ] Story 6.3: Detalhe do Contrato ← **PRÓXIMA**
+- [ ] Story 6.4: Editar Contrato
+- [ ] Story 6.5: ...
 
 ---
 
@@ -212,9 +214,9 @@ npx tsc --noEmit
 ---
 
 **Última atualização:** 2026-02-21
-**Status:** ✅ Fases 1–5 COMPLETAS + Story 6.1 COMPLETA (20 stories — ~48%)
-**Próxima ação:** Story 6.2 — Formulário de Contrato
+**Status:** ✅ Fases 1–5 + Stories 6.1 e 6.2 COMPLETAS (21 stories — ~50%)
+**Próxima ação:** Story 6.3 — Detalhe do Contrato
 
 ---
 
-💻 **@dev — Story 6.1 concluída! Primeira tabela de dados reais: lista de contratos com filtros e StatusBadge. Pronto para Story 6.2.**
+💻 **@dev — Story 6.2 concluída! Formulário de criação com React Hook Form + Zod + upload de documento. Pronto para Story 6.3 (Detalhe).**
