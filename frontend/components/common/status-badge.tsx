@@ -3,7 +3,8 @@ import { cn } from '@/lib/utils'
 
 export type StatusContrato = 'ativo' | 'concluido' | 'rescindido' | 'suspenso' | 'arquivado'
 export type StatusReajuste = 'solicitado' | 'analise' | 'aprovado' | 'rejeitado' | 'implementado'
-export type StatusBadgeType = StatusContrato | StatusReajuste
+export type StatusAF = 'pendente' | 'parcial' | 'concluida' | 'cancelada'
+export type StatusBadgeType = StatusContrato | StatusReajuste | StatusAF
 
 interface StatusBadgeProps {
   status: StatusBadgeType
@@ -36,6 +37,23 @@ const STATUS_CONFIG: Record<StatusBadgeType, StatusConfig> = {
   arquivado: {
     label: 'Arquivado',
     className: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
+  // Status de AFs
+  pendente: {
+    label: 'Pendente',
+    className: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  parcial: {
+    label: 'Parcial',
+    className: 'bg-blue-50 text-blue-700 border-blue-200',
+  },
+  concluida: {
+    label: 'Concluída',
+    className: 'border-transparent bg-green-100 text-green-800 hover:bg-green-100',
+  },
+  cancelada: {
+    label: 'Cancelada',
+    className: 'border-transparent bg-red-100 text-red-800 hover:bg-red-100',
   },
   // Status de reajustes
   solicitado: {

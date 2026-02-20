@@ -71,14 +71,14 @@ useEffect → afService.getAll() → setAfs → setLoading(false)
 ```
 
 ## ✅ Critérios
-- [ ] StatusBadge estendido: pendente/parcial/concluida/cancelada funcionando
-- [ ] AFs listadas com relações (contrato, item via AFWithRelations)
-- [ ] saldo_af exibido do banco — nunca recalculado
-- [ ] Filtro por status funcional (client ou server-side)
-- [ ] Botão "Emitir AF" visível apenas admin/compras
-- [ ] Link "Detalhes" funciona para todos os perfis
-- [ ] LoadingSkeleton durante fetch
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] StatusBadge estendido: pendente/parcial/concluida/cancelada funcionando
+- [x] AFs listadas com relações (contrato, item via AFWithRelations)
+- [x] saldo_af exibido do banco — nunca recalculado
+- [x] Filtro por status funcional (server-side via FiltrosAF) + busca por numero_af (client-side)
+- [x] Botão "Emitir AF" visível apenas admin/compras
+- [x] Link "Detalhes" funciona para todos os perfis
+- [x] LoadingSkeleton durante fetch
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA recalcular `saldo_af` no frontend — é GENERATED ALWAYS (Decisão #3)
@@ -86,4 +86,4 @@ useEffect → afService.getAll() → setAfs → setLoading(false)
 - Status 'ativa' NÃO existe na enum do banco — usar apenas: pendente/parcial/concluida/cancelada
 - `afService.getAll()` retorna `AFWithRelations` com join item→contrato ✅
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
