@@ -65,13 +65,13 @@ Card: Segurança
 ```
 
 ## ✅ Critérios
-- [ ] Exibir nome, email e perfil do usuário autenticado
-- [ ] Atualizar nome funcionando
-- [ ] Alterar senha funcionando
-- [ ] Email e perfil somente leitura
-- [ ] Toast de sucesso/erro
-- [ ] Todos os perfis acessam
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] Exibir nome, email, perfil e empresa do usuário autenticado
+- [x] Atualizar nome funcionando (supabase.from('usuarios').update + refreshUser)
+- [x] Alterar senha funcionando (supabase.auth.updateUser)
+- [x] Email e perfil somente leitura (com mensagem explicativa)
+- [x] Toast de sucesso/erro em ambos os forms
+- [x] Todos os perfis acessam
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA permitir editar email diretamente (requer fluxo de verificação Supabase)
@@ -79,4 +79,4 @@ Card: Segurança
 - `supabase.auth.updateUser({ password })` usa a sessão atual — não precisa de senha anterior
 - Verificar se existe link "Meu Perfil" na sidebar; se não existir, adicionar em Story 12.1
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
