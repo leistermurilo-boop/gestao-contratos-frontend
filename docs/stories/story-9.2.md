@@ -76,13 +76,13 @@ const schema = z.object({
 ```
 
 ## ✅ Critérios
-- [ ] Seleção cascata contrato → item funcional
-- [ ] Saldo do item exibido em tempo real no select
-- [ ] Validação de saldo: mensagem de erro clara quando insuficiente
-- [ ] Upload documento AF opcional
-- [ ] Redirect para lista de AFs após emissão
-- [ ] Apenas admin e compras acessam (ProtectedRoute)
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] Seleção cascata contrato → item funcional
+- [x] Saldo do item exibido em tempo real no select (chip "Saldo disponível")
+- [x] Validação de saldo: mensagem de erro clara quando insuficiente (via afService.create)
+- [x] Upload documento AF opcional (.pdf/.doc/.docx, 10MB)
+- [x] Redirect para lista de AFs após emissão
+- [x] Apenas admin e compras acessam (ProtectedRoute)
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA enviar `empresa_id`, `saldo_af`, `quantidade_entregue` no insert
@@ -90,4 +90,4 @@ const schema = z.object({
 - Status inicial default 'pendente' é gerenciado pelo banco (não enviar na UI)
 - itensService.getByContrato usa `deleted_at IS NULL` internamente ✅
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
