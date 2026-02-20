@@ -12,6 +12,16 @@ ANTES de implementar QUALQUER story:
 
 ---
 
+## 📐 Autonomia do @architect
+
+A partir da Story 8.1, decisões técnicas são de responsabilidade do @architect.
+
+Leia: `docs/ARCHITECT_AUTONOMY.md`
+
+O PO define NEGÓCIO, o @architect define TÉCNICA.
+
+---
+
 <!-- AIOS-MANAGED-START: core-framework -->
 ## Core Framework Understanding
 
