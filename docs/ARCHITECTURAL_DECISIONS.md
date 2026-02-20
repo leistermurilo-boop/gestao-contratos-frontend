@@ -213,8 +213,8 @@ const handleAction = async () => {
     setLoading(true)
     setError(null)
     // ... operação
-  } catch (err: any) {
-    setError(err.message)
+  } catch (err: unknown) {
+    setError(err instanceof Error ? err.message : 'Erro inesperado')
   } finally {
     setLoading(false)
   }

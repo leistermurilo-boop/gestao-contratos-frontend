@@ -50,7 +50,8 @@ export class ContratosService {
           razao_social
         ),
         empresa:empresas (
-          nome
+          razao_social,
+          nome_fantasia
         )
       `)
       .eq('id', id)
@@ -67,7 +68,7 @@ export class ContratosService {
   async getWithFilters(filtros: FiltrosContrato): Promise<ContratoWithRelations[]> {
     let query = this.supabase
       .from('contratos')
-      .select('*, cnpj:cnpjs (cnpj, razao_social)')
+      .select('*, cnpj:cnpjs (cnpj_numero, razao_social)')
       .is('deleted_at', null)
 
     if (filtros.status) {
@@ -104,7 +105,7 @@ export class ContratosService {
     const { data, error } = await this.supabase
       .from('contratos')
       .insert(contrato)
-      .select('*, cnpj:cnpjs (cnpj, razao_social)')
+      .select('*, cnpj:cnpjs (cnpj_numero, razao_social)')
       .single()
 
     if (error) throw new Error(error.message)
@@ -121,7 +122,7 @@ export class ContratosService {
       .update(contrato)
       .eq('id', id)
       .is('deleted_at', null)
-      .select('*, cnpj:cnpjs (cnpj, razao_social)')
+      .select('*, cnpj:cnpjs (cnpj_numero, razao_social)')
       .single()
 
     if (error) throw new Error(error.message)
@@ -155,7 +156,7 @@ export class ContratosService {
 
     const { data, error } = await this.supabase
       .from('contratos')
-      .select('*, cnpj:cnpjs (cnpj, razao_social)')
+      .select('*, cnpj:cnpjs (cnpj_numero, razao_social)')
       .eq('status', 'ativo')
       .is('deleted_at', null)
       .gte('data_vigencia_fim', today.toISOString().split('T')[0])

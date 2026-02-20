@@ -8,9 +8,15 @@
 
 Antes de @dev implementar QUALQUER story, @analyst DEVE verificar:
 
-### ✅ Checklist de 5 Pontos:
+### ✅ Checklist de 6 Pontos:
 
-1. **CONSISTÊNCIA ARQUITETURAL**
+1. **SYNC DATABASE/TYPES** ← NOVO (adicionado após auditoria 20/02/2026)
+   - Colunas usadas na story existem em `database.types.ts`?
+   - Nomes de colunas batem com as migrations SQL? (ex: `cnpj_numero` vs `cnpj`)
+   - Joins inline nas queries usam nomes de colunas reais? (ex: `empresa:empresas(razao_social)`)
+   - Ao criar nova rota em `routes.ts`, criar `page.tsx` correspondente na mesma story?
+
+2. **CONSISTÊNCIA ARQUITETURAL**
    - Story usa RLS (sem .eq manual em empresa_id)?
    - Padrão alinhado com stories anteriores?
    - Sem duplicação de regra de negócio?

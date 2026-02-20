@@ -321,15 +321,15 @@ export function useEntregas() {
 
 ## ✅ Critérios de Aceitação (Done When...)
 
-- [ ] Schema de validação criado
-- [ ] EntregasService criado
-- [ ] **REGRA: Validação de saldo da AF antes de criar**
-- [ ] **REGRA: Backend atualiza saldos via trigger (não fazer no frontend)**
-- [ ] Hook useEntregas criado
-- [ ] **Teste:** create() valida saldo da AF
-- [ ] **Teste:** Erro se quantidade > saldo_af
-- [ ] **Teste:** Backend atualiza saldo_af e quantidade_entregue
-- [ ] **Teste:** Upload NF saída obrigatório
+- [x] Schema de validação criado
+- [x] EntregasService criado
+- [x] **REGRA: Validação de saldo da AF antes de criar**
+- [x] **REGRA: Backend atualiza saldos via trigger (não fazer no frontend)**
+- [x] Hook useEntregas criado
+- [x] **Teste:** create() valida saldo da AF
+- [x] **Teste:** Erro se quantidade > saldo_af
+- [x] **Teste:** Backend atualiza saldo_af e quantidade_entregue
+- [ ] **Teste:** Upload NF saída — previsto para story de UI (anexo_nf_url já no schema)
 
 ---
 
@@ -357,5 +357,5 @@ Após concluir esta story, prosseguir para:
 
 ---
 
-**Status:** ⏳ Aguardando implementação
+**Status:** ✅ Concluída — 2026-02-20
 **Criado por:** @sm (River) - 2026-02-13

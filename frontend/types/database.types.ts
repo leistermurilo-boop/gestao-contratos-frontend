@@ -71,9 +71,12 @@ export interface Database {
         Row: {
           id: string
           empresa_id: string
-          cnpj: string
+          cnpj_numero: string
+          tipo: 'matriz' | 'filial'
           razao_social: string
           nome_fantasia: string | null
+          cidade: string | null
+          estado: string | null
           ativo: boolean
           created_at: string
           updated_at: string
@@ -81,9 +84,12 @@ export interface Database {
         Insert: {
           id?: string
           empresa_id: string
-          cnpj: string
+          cnpj_numero: string
+          tipo?: 'matriz' | 'filial'
           razao_social: string
           nome_fantasia?: string | null
+          cidade?: string | null
+          estado?: string | null
           ativo?: boolean
           created_at?: string
           updated_at?: string
@@ -91,9 +97,12 @@ export interface Database {
         Update: {
           id?: string
           empresa_id?: string
-          cnpj?: string
+          cnpj_numero?: string
+          tipo?: 'matriz' | 'filial'
           razao_social?: string
           nome_fantasia?: string | null
+          cidade?: string | null
+          estado?: string | null
           ativo?: boolean
           created_at?: string
           updated_at?: string

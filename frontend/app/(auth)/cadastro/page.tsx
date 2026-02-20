@@ -53,7 +53,16 @@ export default function CadastroPage() {
       if (authError) throw new Error(authError.message)
       if (!authData.user) throw new Error('Erro ao criar credenciais. Tente novamente.')
 
-      // 2. authData.session é null quando "Confirm Email" está ativado no Supabase.
+      // 2. Detectar email já cadastrado: Supabase retorna sucesso silencioso com identities[]
+      //    vazio quando email já existe e "Confirm Email" está ativo. Sem esse check,
+      //    o form redireciona para confirm-email sem mostrar erro, e nunca insere na DB.
+      if ((authData.user.identities ?? []).length === 0) {
+        throw new Error(
+          'Este email já está cadastrado. Faça login ou use "Esqueceu a senha?" para recuperar o acesso.'
+        )
+      }
+
+      // 3. authData.session é null quando "Confirm Email" está ativado no Supabase.
       //    NÃO usar getSession() aqui — pode retornar sessão temporária do signUp mesmo
       //    com confirmação obrigatória, causando erro nas inserções seguintes.
       if (!authData.session) {
@@ -62,7 +71,7 @@ export default function CadastroPage() {
         return
       }
 
-      // 3. Criar empresa
+      // 4. Criar empresa
       const { data: empresa, error: empresaError } = await supabase
         .from('empresas')
         .insert({
@@ -82,7 +91,7 @@ export default function CadastroPage() {
         )
       }
 
-      // 4. Criar perfil do usuário na tabela usuarios
+      // 5. Criar perfil do usuário na tabela usuarios
       const { error: usuarioError } = await supabase.from('usuarios').insert({
         id: authData.user.id,
         empresa_id: empresa.id,
@@ -101,7 +110,7 @@ export default function CadastroPage() {
         )
       }
 
-      // 5. Sucesso — redirecionar para dashboard
+      // 6. Sucesso — redirecionar para dashboard
       router.push('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro inesperado. Tente novamente.')

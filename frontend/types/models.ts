@@ -7,7 +7,7 @@ export type ContratoUpdate = Database['public']['Tables']['contratos']['Update']
 
 export interface ContratoWithRelations extends Contrato {
   cnpj?: {
-    cnpj: string
+    cnpj_numero: string
     razao_social: string
   } | null
   empresa?: {
@@ -41,6 +41,7 @@ export type AutorizacaoFornecimentoUpdate =
 // ─── Entregas ─────────────────────────────────────────────────────────────────
 export type Entrega = Database['public']['Tables']['entregas']['Row']
 export type EntregaInsert = Database['public']['Tables']['entregas']['Insert']
+export type EntregaUpdate = Database['public']['Tables']['entregas']['Update']
 
 // ─── Reajustes ────────────────────────────────────────────────────────────────
 export type Reajuste = Database['public']['Tables']['reajustes']['Row']
