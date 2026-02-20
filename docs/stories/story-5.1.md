@@ -52,13 +52,13 @@ export class DashboardService {
 Exibir: Total Contratos, Valor Total, Margem Média, Alertas
 
 ## ✅ Critérios
-- [ ] Métricas carregam do backend
-- [ ] Cards responsivos (grid)
-- [ ] **REGRA: NUNCA recalcular valores - backend agrega**
-- [ ] Loading state implementado
+- [x] Métricas carregam do backend
+- [x] Cards responsivos (grid)
+- [x] **REGRA: NUNCA recalcular valores - backend agrega**
+- [x] Loading state implementado (Skeleton)
 
 ## 🔗 Dependências
 Story 4.6: Todos services criados
 
-**Status:** ⏳ Aguardando
+**Status:** ✅ Concluída — 2026-02-21
 **Criado:** @sm (River) - 2026-02-13
