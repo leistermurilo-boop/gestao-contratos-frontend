@@ -10,6 +10,7 @@ export interface CustoItemWithRelations extends CustoItem {
   item?: {
     numero_item: number | null
     descricao: string
+    contrato_id: string
     contrato?: {
       numero_contrato: string
       orgao_publico: string
@@ -53,6 +54,7 @@ export class CustosService {
         item:itens_contrato (
           numero_item,
           descricao,
+          contrato_id,
           contrato:contratos (
             numero_contrato,
             orgao_publico

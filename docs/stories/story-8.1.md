@@ -39,16 +39,16 @@ Colunas: Data Lançamento | Contrato | Item | Custo Unit. | Qtd | Fornecedor | N
 - Estado vazio: "Nenhum custo registrado ainda."
 
 ## ✅ Critérios
-- [ ] Custos listados com relações (contrato, item)
-- [ ] logistica não acessa (ProtectedRoute + RLS)
-- [ ] Sem botão de excluir/editar (custos imutáveis na UI)
-- [ ] Filtro por fornecedor e NF funcionando (client-side)
-- [ ] LoadingSkeleton durante fetch
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] Custos listados com relações (contrato, item)
+- [x] logistica não acessa (ProtectedRoute + RLS)
+- [x] Sem botão de excluir/editar (custos imutáveis na UI)
+- [x] Filtro por fornecedor e NF funcionando (client-side)
+- [x] LoadingSkeleton durante fetch
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA recalcular `custo_medio` ou `margem_atual` no frontend — exibir do banco
 - NUNCA passar `empresa_id` no service — RLS injeta
 - `custosService.getAll()` usa `CustoItemWithRelations` — join com item e contrato já incluso
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
