@@ -70,10 +70,10 @@ frontend/
 - [x] Story 4.5: AF Service
 - [x] Story 4.6: Entrega Service
 
-### ⏳ Fase 5: Dashboard (EM ANDAMENTO — ~67%)
+### ✅ Fase 5: Dashboard (COMPLETO — 100%)
 - [x] Story 5.1: Métricas do Dashboard ← **CONCLUÍDA**
-- [x] Story 5.2: Gráficos do Dashboard ← **CONCLUÍDA HOJE**
-- [ ] Story 5.3: Alertas do Dashboard ← **PRÓXIMA**
+- [x] Story 5.2: Gráficos do Dashboard ← **CONCLUÍDA**
+- [x] Story 5.3: Alertas do Dashboard ← **CONCLUÍDA HOJE**
 
 ### ⏳ Fase 6: Contratos (0%)
 - [ ] Story 6.1: Lista de Contratos
@@ -82,20 +82,21 @@ frontend/
 
 ---
 
-## 🎯 PRÓXIMO PASSO EXATO (Story 5.3)
+## 🎯 PRÓXIMO PASSO EXATO (Story 6.1)
 
-### 🚀 Story 5.3: Alertas do Dashboard
+### 🚀 Story 6.1: Lista de Contratos
 
 #### O que será implementado:
-- Alertas de contratos vencendo em breve
-- Alertas de margem baixa (abaixo do threshold)
-- MargemIndicator visual
-- Integração com dashboard/page.tsx
+- DataTable com colunas: número, órgão, valor, vigência, status
+- Filtros: status, órgão, busca por número
+- StatusBadge para cada status
+- Link para detalhes: `/contratos/[id]`
+- Soft delete: filtrar `deleted_at IS NULL`
 
 #### Pré-requisitos:
-- ✅ dashboard.service.ts funcional (com getAlertasMetrics já implementado)
-- ✅ DashboardCards disponível (Story 5.1)
-- ✅ `app/(dashboard)/dashboard/page.tsx` atualizado
+- ✅ contratos.service.ts funcional (getAll, getWithFilters)
+- ✅ StatusBadge disponível (components/common/status-badge.tsx)
+- ✅ Página placeholder em `/dashboard/contratos/page.tsx`
 
 ---
 
@@ -211,9 +212,9 @@ npx tsc --noEmit
 ---
 
 **Última atualização:** 2026-02-21
-**Status:** ✅ Fases 1–4 COMPLETAS + Stories 5.1 e 5.2 COMPLETAS (18 stories)
-**Próxima ação:** Story 5.3 — Alertas do Dashboard
+**Status:** ✅ Fases 1–5 COMPLETAS (19 stories — 45% do projeto)
+**Próxima ação:** Story 6.1 — Lista de Contratos (primeira tabela de dados reais)
 
 ---
 
-💻 **@dev — Story 5.2 concluída! Gráficos Recharts no dashboard (margem mensal + vencimentos 90 dias). Pronto para Story 5.3 (Alertas do Dashboard).**
+💻 **@dev — Fase 5 (Dashboard) 100% concluída! Métricas + Gráficos + Alertas. Pronto para Story 6.1 (Lista de Contratos).**

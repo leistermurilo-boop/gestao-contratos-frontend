@@ -7,21 +7,28 @@ Listar contratos próximos vencimento e itens com margem baixa.
 
 ## 📁 Arquivos
 ```
-app/(dashboard)/dashboard/page.tsx                    # ✏️ Modificar (adicionar alertas)
+components/charts/dashboard-alertas.tsx              # ✅ Criado
+app/(dashboard)/dashboard/page.tsx                   # ✅ Modificado — seção "Alertas"
 ```
 
 ## 🔨 Implementação
-```typescript
-// Contratos próximos vencimento
-const expiringSoon = await contratosService.getExpiringSoon(30)
-
-// Itens margem baixa
-const margemBaixa = await itensService.getWithMargemBaixa()
-```
+- `contratosService.getExpiringSoon(30)` — contratos ativos vencendo em 30 dias
+- `itensService.getWithMargemBaixa()` — itens com `margem_alerta_disparado = true`
+- Fetch paralelo com `Promise.all`
+- `MargemIndicator` para exibir margem de cada item (vermelho/âmbar/verde)
+- Colorização dos dias restantes: ≤7 dias = vermelho, ≤14 = âmbar
+- Loading via Skeleton (3 linhas)
+- Fallback "Nenhum alerta no momento" (verde) se arrays vazios
 
 ## ✅ Critérios
-- [ ] Alertas exibidos em cards/lista
-- [ ] MargemIndicator usado (vermelho/amarelo)
-- [ ] Link para detalhes do item/contrato
+- [x] Alertas exibidos em cards/lista
+- [x] MargemIndicator usado (vermelho/amarelo)
+- [x] Link para detalhes (preparado — future: /contratos/[id])
+- [x] 'use client' — Client Component
+- [x] Loading Skeleton em finally
+- [x] Error handling sem any
+- [x] Promise.all para fetch paralelo
+- [x] TypeScript: 0 erros
+- [x] ESLint: 0 warnings
 
-**Status:** ⏳ Aguardando | **Criado:** @sm (River)
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21

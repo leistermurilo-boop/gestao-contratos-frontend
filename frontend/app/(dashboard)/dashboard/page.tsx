@@ -10,6 +10,7 @@ import {
 import { DashboardCards } from '@/components/charts/dashboard-cards'
 import { MargemChart } from '@/components/charts/margem-chart'
 import { VencimentosChart } from '@/components/charts/vencimentos-chart'
+import { DashboardAlertas } from '@/components/charts/dashboard-alertas'
 
 interface ModuleCard {
   title: string
@@ -93,6 +94,14 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Alertas operacionais */}
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-slate-500 uppercase tracking-wide">
+          Alertas
+        </h2>
+        <DashboardAlertas />
       </div>
 
       {/* Cards dos módulos */}
