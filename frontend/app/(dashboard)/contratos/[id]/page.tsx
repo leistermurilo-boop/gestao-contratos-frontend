@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { FileDown, Pencil, ArrowLeft } from 'lucide-react'
+import { Archive, FileDown, Pencil, ArrowLeft } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,8 +17,11 @@ import {
 } from '@/components/ui/table'
 import { StatusBadge, type StatusContrato } from '@/components/common/status-badge'
 import { MargemIndicator } from '@/components/common/margem-indicator'
+import { ConfirmDialog } from '@/components/modals/confirm-dialog'
 import { contratosService } from '@/lib/services/contratos.service'
 import { itensService } from '@/lib/services/itens.service'
+import { useAuth } from '@/contexts/auth-context'
+import { PERFIS } from '@/lib/constants/perfis'
 import { type ContratoWithRelations, type ItemContrato } from '@/types/models'
 import toast from 'react-hot-toast'
 
@@ -72,11 +75,14 @@ function LoadingSkeleton() {
 
 export default function ContratoDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const id = params.id as string
+  const { usuario } = useAuth()
 
   const [contrato, setContrato] = useState<ContratoWithRelations | null>(null)
   const [itens, setItens] = useState<ItemContrato[]>([])
   const [loading, setLoading] = useState(true)
+  const [archiving, setArchiving] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -95,6 +101,22 @@ export default function ContratoDetailPage() {
     }
     load()
   }, [id])
+
+  async function handleArquivar() {
+    if (!usuario) return
+    setArchiving(true)
+    try {
+      await contratosService.softDelete(id, usuario.id)
+      toast.success('Contrato arquivado com sucesso!')
+      router.push('/dashboard/contratos')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao arquivar contrato')
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+  const isAdmin = usuario?.perfil === PERFIS.admin
 
   if (loading) return <LoadingSkeleton />
 
@@ -153,6 +175,21 @@ export default function ContratoDetailPage() {
               Editar
             </Link>
           </Button>
+          {isAdmin && (
+            <ConfirmDialog
+              trigger={
+                <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" disabled={archiving}>
+                  <Archive className="mr-2 h-4 w-4" />
+                  {archiving ? 'Arquivando...' : 'Arquivar'}
+                </Button>
+              }
+              title="Arquivar contrato?"
+              description={`O contrato ${contrato.numero_contrato} será arquivado e não aparecerá mais na lista. Esta ação pode ser revertida pelo administrador do banco.`}
+              confirmLabel="Arquivar"
+              onConfirm={handleArquivar}
+              disabled={archiving}
+            />
+          )}
         </div>
       </div>
 

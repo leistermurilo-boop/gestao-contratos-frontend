@@ -80,7 +80,7 @@ frontend/
 - [x] Story 6.2: Criar Contrato ← **CONCLUÍDA**
 - [x] Story 6.3: Detalhes do Contrato ← **CONCLUÍDA HOJE**
 - [x] Story 6.4: Editar Contrato ← **CONCLUÍDA**
-- [ ] Story 6.5: ...
+- [x] Story 6.5: Soft Delete Contrato ← **CONCLUÍDA**
 
 ---
 
@@ -214,9 +214,9 @@ npx tsc --noEmit
 ---
 
 **Última atualização:** 2026-02-21
-**Status:** ✅ Fases 1–5 + Stories 6.1–6.4 COMPLETAS (23 stories — ~55%)
-**Próxima ação:** Story 6.5 — (a definir: Deletar Contrato / Próximos módulos)
+**Status:** ✅ Fases 1–5 + Stories 6.1–6.5 COMPLETAS (24 stories — ~57%)
+**Próxima ação:** Fase 7 — Módulo de Itens do Contrato
 
 ---
 
-💻 **@dev — Story 6.4 concluída! Edição de contrato com ContratoForm reutilizado, pré-preenchimento, upload preservado e ContratoUpdateSeguro. Pronto para Story 6.5.**
+💻 **@dev — Story 6.5 concluída! Soft delete com ConfirmDialog reutilizável, guard admin-only e redirect automático. Fase 6 (Contratos) 100% completa!**
