@@ -85,18 +85,18 @@ Tabela de entregas:
 ```
 
 ## ✅ Critérios
-- [ ] Dados da AF exibidos corretamente com relações (contrato, item)
-- [ ] saldo_af do banco sem recalcular
-- [ ] Barra de progresso funcional
-- [ ] Lista de entregas da AF
-- [ ] Botão "Registrar Entrega" visível apenas quando permitido (canRegisterEntrega + status + saldo)
-- [ ] Not-found state quando AF não existe
-- [ ] LoadingSkeleton durante fetch
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] Dados da AF exibidos corretamente com relações (contrato, item)
+- [x] saldo_af do banco sem recalcular
+- [x] Barra de progresso funcional (azul com saldo, verde quando concluída)
+- [x] Lista de entregas da AF com nf_saida_numero e link anexo_nf_url
+- [x] Botão "Registrar Entrega" visível apenas quando permitido (canRegisterEntrega + status + saldo)
+- [x] Not-found state quando AF não existe
+- [x] LoadingSkeleton durante fetch
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA calcular saldo_af = quantidade_autorizada - quantidade_entregue no frontend (Decisão #3)
 - Coluna correta: `nf_saida_numero` (não `nota_fiscal_saida`)
 - Coluna correta: `af_id` (FK de entregas para autorizacoes_fornecimento)
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
