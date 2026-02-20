@@ -8,6 +8,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { DashboardCards } from '@/components/charts/dashboard-cards'
+import { MargemChart } from '@/components/charts/margem-chart'
+import { VencimentosChart } from '@/components/charts/vencimentos-chart'
 
 interface ModuleCard {
   title: string
@@ -62,6 +64,36 @@ export default function DashboardPage() {
 
       {/* Métricas em tempo real */}
       <DashboardCards />
+
+      {/* Gráficos analíticos */}
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-slate-500 uppercase tracking-wide">
+          Análise
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="border-slate-200 bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-slate-700">
+                Evolução de Margem (3 meses)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MargemChart />
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-slate-700">
+                Vencimentos Próximos (90 dias)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <VencimentosChart />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Cards dos módulos */}
       <div>

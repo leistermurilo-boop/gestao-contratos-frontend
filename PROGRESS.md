@@ -1,7 +1,7 @@
 # PROGRESS.md - Estado do Projeto
 
 **Data:** 2026-02-21 (última atualização)
-**Sessão:** Story 5.1 + Commits pendentes da sessão 20/02
+**Sessão:** Story 5.2 — Gráficos do Dashboard
 **Agentes:** @analyst + @dev
 
 ---
@@ -70,30 +70,32 @@ frontend/
 - [x] Story 4.5: AF Service
 - [x] Story 4.6: Entrega Service
 
-### ⏳ Fase 5: Módulos UI (EM ANDAMENTO — ~10%)
-- [x] Story 5.1: Métricas do Dashboard ← **CONCLUÍDA HOJE**
-- [ ] Story 5.2: Listagem de Contratos ← **PRÓXIMA**
-- [ ] Story 5.3: Formulário de Contrato
+### ⏳ Fase 5: Dashboard (EM ANDAMENTO — ~67%)
+- [x] Story 5.1: Métricas do Dashboard ← **CONCLUÍDA**
+- [x] Story 5.2: Gráficos do Dashboard ← **CONCLUÍDA HOJE**
+- [ ] Story 5.3: Alertas do Dashboard ← **PRÓXIMA**
+
+### ⏳ Fase 6: Contratos (0%)
+- [ ] Story 6.1: Lista de Contratos
+- [ ] Story 6.2: Formulário de Contrato
 - [ ] ...
 
 ---
 
-## 🎯 PRÓXIMO PASSO EXATO (Story 5.2)
+## 🎯 PRÓXIMO PASSO EXATO (Story 5.3)
 
-### 🚀 Story 5.2: Listagem de Contratos
+### 🚀 Story 5.3: Alertas do Dashboard
 
 #### O que será implementado:
-- Tabela de contratos com filtros (status, órgão, busca)
-- Paginação ou scroll infinito
-- Badge de status (ativo, concluído, rescindido...)
-- Integração com `useContratos()` / `contratosService`
-- Link para detalhe do contrato
+- Alertas de contratos vencendo em breve
+- Alertas de margem baixa (abaixo do threshold)
+- MargemIndicator visual
+- Integração com dashboard/page.tsx
 
-#### Pré-requisitos confirmados:
-- ✅ contratos.service.ts funcional
-- ✅ use-contratos.ts implementado
-- ✅ Página placeholder em `/dashboard/contratos/`
-- ✅ components/common/status-badge.tsx disponível
+#### Pré-requisitos:
+- ✅ dashboard.service.ts funcional (com getAlertasMetrics já implementado)
+- ✅ DashboardCards disponível (Story 5.1)
+- ✅ `app/(dashboard)/dashboard/page.tsx` atualizado
 
 ---
 
@@ -177,9 +179,9 @@ Ao retornar para continuar o projeto:
 - [ ] Verificar último commit: `git log --oneline | head -5`
 - [ ] Iniciar servidor dev: `cd frontend && npm run dev`
 - [ ] Confirmar login e métricas em `http://localhost:3000/dashboard`
-- [ ] Abrir `docs/stories/story-5.2.md` (ou criar se não existir)
+- [ ] Abrir `docs/stories/story-5.2.md` (Gráficos do Dashboard)
 - [ ] Executar validação @analyst (6 pontos — SYNC DATABASE/TYPES)
-- [ ] Implementar Story 5.2 (Listagem de Contratos)
+- [ ] Implementar Story 5.2 (Gráficos do Dashboard)
 - [ ] Commitar ao concluir
 
 ---
@@ -209,9 +211,9 @@ npx tsc --noEmit
 ---
 
 **Última atualização:** 2026-02-21
-**Status:** ✅ Fases 1–4 COMPLETAS + Story 5.1 COMPLETA (17 stories)
-**Próxima ação:** Story 5.2 — Listagem de Contratos (primeira tabela de dados reais)
+**Status:** ✅ Fases 1–4 COMPLETAS + Stories 5.1 e 5.2 COMPLETAS (18 stories)
+**Próxima ação:** Story 5.3 — Alertas do Dashboard
 
 ---
 
-💻 **@dev — Story 5.1 concluída! Primeiros dados reais no dashboard (métricas, alertas, valor total). Pronto para Story 5.2 (Listagem de Contratos).**
+💻 **@dev — Story 5.2 concluída! Gráficos Recharts no dashboard (margem mensal + vencimentos 90 dias). Pronto para Story 5.3 (Alertas do Dashboard).**
