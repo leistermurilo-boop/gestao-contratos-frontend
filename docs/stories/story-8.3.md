@@ -74,13 +74,13 @@ interface CustoFormProps {
 ```
 
 ## ✅ Critérios
-- [ ] Form salva custo com 4 campos obrigatórios
-- [ ] Upload NF opcional: funciona com e sem arquivo
-- [ ] nf_entrada_url preenchido somente após upload bem-sucedido
-- [ ] Redirect para `/contratos/[id]/itens/[itemId]/custos` após salvar
-- [ ] Toast de erro em falha (service ou upload)
-- [ ] logistica não acessa (ProtectedRoute)
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] Form salva custo com 4 campos obrigatórios
+- [x] Upload NF opcional: funciona com e sem arquivo
+- [x] nf_entrada_url preenchido somente após upload bem-sucedido
+- [x] Redirect para `/contratos/[id]/itens/[itemId]/custos` após salvar
+- [x] Toast de erro em falha (service ou upload)
+- [x] logistica não acessa (ProtectedRoute)
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA enviar `empresa_id` no insert — RLS injeta (Decisão #1)
@@ -88,4 +88,4 @@ interface CustoFormProps {
 - Upload path deve começar com `empresa_id/` — uploadService valida isso
 - Se upload falhar → abort todo o submit (não criar custo sem NF vinculada quando foi selecionada)
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
