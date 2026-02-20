@@ -21,6 +21,7 @@ export interface AFWithRelations extends AutorizacaoFornecimento {
   item?: {
     numero_item: number | null
     descricao: string
+    unidade: string
     quantidade: number
     saldo_quantidade: number
     contrato?: {
@@ -53,6 +54,7 @@ export class AFService {
         item:itens_contrato (
           numero_item,
           descricao,
+          unidade,
           quantidade,
           saldo_quantidade,
           contrato:contratos (

@@ -77,14 +77,14 @@ Saldo disponível: {af.saldo_af} {af.item?.unidade}
 ```
 
 ## ✅ Critérios
-- [ ] Contexto da AF exibido (AF#, item, saldo)
-- [ ] Saldo da AF exibido do banco sem recalcular
-- [ ] Validação de saldo: erro claro quando quantidade > saldo_af
-- [ ] Upload NF Saída opcional
-- [ ] Redirect para Detalhes da AF após registrar
-- [ ] Financeiro não acessa (ProtectedRoute)
-- [ ] AF cancelada ou com saldo zero → redirect automático
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] Contexto da AF exibido (AF#, item, saldo)
+- [x] Saldo da AF exibido do banco sem recalcular (af.saldo_af do AFWithRelations)
+- [x] Validação de saldo: erro claro quando quantidade > saldo_af (via entregasService.create)
+- [x] Upload NF Saída opcional (.pdf/.xml, 5MB)
+- [x] Redirect para Detalhes da AF após registrar
+- [x] Financeiro não acessa (ProtectedRoute)
+- [x] AF cancelada ou com saldo zero → redirect automático com toast
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA enviar `empresa_id` no insert (Decisão #1)
@@ -93,4 +93,4 @@ Saldo disponível: {af.saldo_af} {af.item?.unidade}
 - Coluna NF: `nf_saida_numero` (não `nota_fiscal_saida`)
 - Upload path deve começar com `empresa_id/`
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
