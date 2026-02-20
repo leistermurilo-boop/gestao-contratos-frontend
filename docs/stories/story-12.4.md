@@ -90,4 +90,4 @@ Criar apenas se Vercel não detectar corretamente o framework.
 - Supabase Storage RLS: confirmar que as políticas de storage aceitam uploads do domínio Vercel
 - Após primeiro deploy bem-sucedido, pushes para `main` fazem deploy automático
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** 🚀 Pronto para deploy (passos manuais pendentes) | **Criado:** @sm/@architect — 2026-02-21
