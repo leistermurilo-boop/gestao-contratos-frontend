@@ -18,6 +18,14 @@
 ### 🔧 Commits Pendentes (da sessão 20/02) feitos hoje:
 - Story 4.6 + 8 páginas placeholder + fixes runtime (vide commit `7bc880d`)
 
+### ✅ Stories Reescritas (Fase 8–12): @sm + @architect reanálise contextual
+- Stories 8.1–8.3 (Módulo de Custos): specs completas com colunas reais do banco
+- Stories 9.1–9.3 (Módulo de AFs): StatusBadge estendido + cascata contrato→item
+- Stories 10.1–10.2 (Módulo de Entregas): imutabilidade + nf_saida_numero
+- Stories 11.1–11.4 (Configurações): CNPJs service, usuários via API Route, perfil, reajustes
+- Stories 12.1–12.4 (Deploy): bug de roteamento documentado, quality gates, Vercel
+- Story 11.4 (NOVA): Reajustes — antecipada por ter sidebar link e StatusBadge já pronto
+
 ---
 
 ## 📁 ARQUIVOS MODIFICADOS/CRIADOS (HOJE)
@@ -87,23 +95,52 @@ frontend/
 - [x] Story 7.2: Criar/Editar Item ← **CONCLUÍDA**
 - [x] Story 7.3: Soft Delete Item (inline) ← **CONCLUÍDA**
 
+### ⏳ Fase 8: Módulo de Custos (STORIES ESCRITAS — 0% implementado)
+- [ ] Story 8.1: Lista Global de Custos ← specs prontas
+- [ ] Story 8.2: Histórico de Custos por Item ← specs prontas
+- [ ] Story 8.3: Registrar Custo ← specs prontas
+
+### ⏳ Fase 9: Módulo de AFs (STORIES ESCRITAS — 0% implementado)
+- [ ] Story 9.1: Lista de AFs + estender StatusBadge ← specs prontas
+- [ ] Story 9.2: Emitir AF ← specs prontas
+- [ ] Story 9.3: Detalhes da AF ← specs prontas
+
+### ⏳ Fase 10: Módulo de Entregas (STORIES ESCRITAS — 0% implementado)
+- [ ] Story 10.1: Lista Global de Entregas ← specs prontas
+- [ ] Story 10.2: Registrar Entrega ← specs prontas
+
+### ⏳ Fase 11: Configurações (STORIES ESCRITAS — 0% implementado)
+- [ ] Story 11.1: Gestão de CNPJs ← specs prontas (requer cnpjs.service.ts)
+- [ ] Story 11.2: Gestão de Usuários ← specs prontas (requer API Route)
+- [ ] Story 11.3: Perfil do Usuário ← specs prontas
+- [ ] Story 11.4: Reajustes (NOVA) ← specs prontas (requer reajustes.service.ts)
+
+### ⏳ Fase 12: Deploy (STORIES ESCRITAS — 0% executado)
+- [ ] Story 12.1: Quality Gates + Correção de Roteamento ← specs prontas (BUG CRÍTICO documentado)
+- [ ] Story 12.2: Testes de Perfil ← specs prontas
+- [ ] Story 12.3: Build + Env Vars ← specs prontas
+- [ ] Story 12.4: Deploy Vercel ← specs prontas
+
 ---
 
-## 🎯 PRÓXIMO PASSO EXATO (Story 6.1)
+## 🎯 PRÓXIMO PASSO EXATO (Story 8.1)
 
-### 🚀 Story 6.1: Lista de Contratos
+### 🚀 Story 8.1: Lista Global de Custos
 
 #### O que será implementado:
-- DataTable com colunas: número, órgão, valor, vigência, status
-- Filtros: status, órgão, busca por número
-- StatusBadge para cada status
-- Link para detalhes: `/contratos/[id]`
-- Soft delete: filtrar `deleted_at IS NULL`
+- Página `/dashboard/custos` substituindo placeholder
+- CustosTable reutilizável com colunas e filtros
+- ProtectedRoute excluindo logistica
 
 #### Pré-requisitos:
-- ✅ contratos.service.ts funcional (getAll, getWithFilters)
-- ✅ StatusBadge disponível (components/common/status-badge.tsx)
-- ✅ Página placeholder em `/dashboard/contratos/page.tsx`
+- ✅ custosService.getAll() com CustoItemWithRelations (join item+contrato)
+- ✅ Página placeholder em `app/(dashboard)/dashboard/custos/page.tsx`
+- ✅ Story spec pronta em `docs/stories/story-8.1.md`
+
+#### ⚠️ Bug crítico a corrigir (Story 12.1):
+- Stories 6.x/7.x estão em `app/(dashboard)/contratos/` → URL `/contratos/*`
+- Sidebar aponta para `/dashboard/contratos/*` → links quebrados
+- Corrigir movendo para `app/(dashboard)/dashboard/contratos/` na Story 12.1
 
 ---
 
@@ -127,13 +164,19 @@ frontend/
 
 ### Progresso Geral:
 ```
-Stories Completas:    17 / 42+ (40%)
-  Fase 1 (Setup):     3/3   ✅ 100%
-  Fase 2 (Auth):      4/4   ✅ 100%
-  Fase 3 (Layout):    3/3   ✅ 100%
-  Fase 4 (Services):  6/6   ✅ 100%
-  Fase 5 (Módulos):   1/??  ⏳ ~10%
-  Fase 6+:            0/??  ⏳ 0%
+Stories Completas:    27 / 43 (63%)
+  Fase 1  (Setup):      3/3  ✅ 100%
+  Fase 2  (Auth):       4/4  ✅ 100%
+  Fase 3  (Layout):     3/3  ✅ 100%
+  Fase 4  (Services):   6/6  ✅ 100%
+  Fase 5  (Dashboard):  3/3  ✅ 100%
+  Fase 6  (Contratos):  5/5  ✅ 100%
+  Fase 7  (Itens):      3/3  ✅ 100%
+  Fase 8  (Custos):     0/3  ⏳   0% (specs prontas)
+  Fase 9  (AFs):        0/3  ⏳   0% (specs prontas)
+  Fase 10 (Entregas):   0/2  ⏳   0% (specs prontas)
+  Fase 11 (Config):     0/4  ⏳   0% (specs prontas)
+  Fase 12 (Deploy):     0/4  ⏳   0% (specs prontas)
 
 Camada de Serviços (frontend):  100% ✅
 Camada de UI (frontend):         10% ⏳
@@ -219,9 +262,9 @@ npx tsc --noEmit
 ---
 
 **Última atualização:** 2026-02-21
-**Status:** ✅ Fases 1–7 COMPLETAS (27 stories — ~64%)
-**Próxima ação:** Fase 8 — Módulo de Custos
+**Status:** ✅ Fases 1–7 COMPLETAS (27 stories — ~64%) | Stories 8–12 ESPECIFICADAS (16 stories)
+**Próxima ação:** Fase 8 — Implementar Story 8.1 (Lista Global de Custos)
 
 ---
 
-💻 **@dev — Fase 7 (Itens) concluída! Lista, CRUD e soft delete de itens. ItensTable reutilizável + ItemForm + 5 novas páginas. Pronto para Fase 8 (Custos).**
+💻 **@sm/@architect — Reanálise contextual completa. Stories 8.1–12.4 reescritas com specs técnicas precisas. Bug de roteamento (6.x/7.x) documentado para Story 12.1. Story 11.4 (Reajustes) criada como nova. Total: 43 stories planejadas.**
