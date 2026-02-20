@@ -7,7 +7,7 @@ export default async function Home() {
   // Testar conexão com query simples
   const { data: empresas, error } = await supabase
     .from('empresas')
-    .select('id, nome')
+    .select('id, razao_social, nome_fantasia')
     .limit(1)
 
   return (
@@ -28,7 +28,7 @@ export default async function Home() {
               <p className="text-sm text-green-800 font-semibold">✅ Conexão estabelecida!</p>
               {empresas && empresas.length > 0 && (
                 <p className="text-xs text-green-600 mt-1">
-                  Empresa encontrada: {empresas[0].nome}
+                  Empresa encontrada: {empresas[0].nome_fantasia ?? empresas[0].razao_social}
                 </p>
               )}
             </div>
