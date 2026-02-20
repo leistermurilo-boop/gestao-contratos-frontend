@@ -90,12 +90,12 @@ useEffect → reajustesService.getAll() → setReajustes
 - Select/dropdown por linha → `reajustesService.updateStatus(id, novoStatus)` → toast + update local
 
 ## ✅ Critérios
-- [ ] `reajustes.service.ts` criado com getAll, getByContrato, create, updateStatus
-- [ ] Listagem com StatusBadge correto
-- [ ] Criar reajuste com upload de documento (opcional)
-- [ ] Atualizar status manualmente
-- [ ] Apenas admin e juridico acessam (ProtectedRoute)
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] `reajustes.service.ts` criado com getAll, getByContrato, create, updateStatus
+- [x] Listagem com StatusBadge correto (StatusReajuste existente)
+- [x] Criar reajuste com upload de documento opcional (BUCKETS.REAJUSTES)
+- [x] Atualizar status manualmente via Select inline por linha
+- [x] Apenas admin e juridico acessam (ProtectedRoute)
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA passar `empresa_id` ao service — RLS injeta (Decisão #1)
@@ -103,4 +103,4 @@ useEffect → reajustesService.getAll() → setReajustes
 - Escopo mínimo: sem cálculo automático de novos valores de contrato — apenas registro do percentual
 - `aprovado_por` é preenchido manualmente (nome/id do aprovador) ou deixado null — fora de escopo automático
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
