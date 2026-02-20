@@ -248,9 +248,16 @@ export default function ContratoDetailPage() {
       {/* Itens do Contrato */}
       <Card className="border-slate-200 bg-white">
         <CardHeader className="border-b border-slate-100 pb-4">
-          <CardTitle className="text-base font-semibold text-slate-800">
-            Itens do Contrato ({itens.length})
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold text-slate-800">
+              Itens do Contrato ({itens.length})
+            </CardTitle>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/dashboard/contratos/${id}/itens`}>
+                Gerenciar Itens
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {itens.length === 0 ? (

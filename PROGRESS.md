@@ -75,12 +75,17 @@ frontend/
 - [x] Story 5.2: Gráficos do Dashboard ← **CONCLUÍDA**
 - [x] Story 5.3: Alertas do Dashboard ← **CONCLUÍDA HOJE**
 
-### ⏳ Fase 6: Contratos (EM ANDAMENTO — ~60%)
+### ✅ Fase 6: Contratos (COMPLETO — 100%)
 - [x] Story 6.1: Lista de Contratos ← **CONCLUÍDA**
 - [x] Story 6.2: Criar Contrato ← **CONCLUÍDA**
-- [x] Story 6.3: Detalhes do Contrato ← **CONCLUÍDA HOJE**
+- [x] Story 6.3: Detalhes do Contrato ← **CONCLUÍDA**
 - [x] Story 6.4: Editar Contrato ← **CONCLUÍDA**
 - [x] Story 6.5: Soft Delete Contrato ← **CONCLUÍDA**
+
+### ✅ Fase 7: Itens do Contrato (COMPLETO — 100%)
+- [x] Story 7.1: Lista de Itens ← **CONCLUÍDA**
+- [x] Story 7.2: Criar/Editar Item ← **CONCLUÍDA**
+- [x] Story 7.3: Soft Delete Item (inline) ← **CONCLUÍDA**
 
 ---
 
@@ -214,9 +219,9 @@ npx tsc --noEmit
 ---
 
 **Última atualização:** 2026-02-21
-**Status:** ✅ Fases 1–5 + Stories 6.1–6.5 COMPLETAS (24 stories — ~57%)
-**Próxima ação:** Fase 7 — Módulo de Itens do Contrato
+**Status:** ✅ Fases 1–7 COMPLETAS (27 stories — ~64%)
+**Próxima ação:** Fase 8 — Módulo de Custos
 
 ---
 
-💻 **@dev — Story 6.5 concluída! Soft delete com ConfirmDialog reutilizável, guard admin-only e redirect automático. Fase 6 (Contratos) 100% completa!**
+💻 **@dev — Fase 7 (Itens) concluída! Lista, CRUD e soft delete de itens. ItensTable reutilizável + ItemForm + 5 novas páginas. Pronto para Fase 8 (Custos).**

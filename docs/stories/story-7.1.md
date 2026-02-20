@@ -2,23 +2,28 @@
 
 **Tipo:** Feature | **Prioridade:** Alta | **Estimativa:** 3 horas | **Responsável:** @dev
 
-## 🎯 Objetivo
-Listar itens de um contrato com indicador de margem.
-
 ## 📁 Arquivos
 ```
-app/(dashboard)/contratos/[id]/itens/page.tsx         # ✅ Criar
-components/tables/itens-table.tsx                     # ✅ Criar
+components/tables/itens-table.tsx                     # ✅ NOVO
+app/(dashboard)/contratos/[id]/itens/page.tsx         # ✅ NOVO
+app/(dashboard)/contratos/[id]/page.tsx               # 🔄 Link "Gerenciar Itens" adicionado
 ```
 
 ## 🔨 Implementação
-- Colunas: número, descrição, quantidade, saldo, valor, margem
-- **MargemIndicator** para cada item
-- **REGRA:** margem_atual vem do backend (NUNCA recalcular)
+- `ItensTable`: componente reutilizável com props `contratoId`, `itens`, `loading`, `isAdmin`, `onDelete`
+- Colunas: #, Descrição, Un., Qtd, Saldo, Vlr Unit., Margem (+ Ações para admin)
+- `MargemIndicator` em cada item | `ConfirmDialog` para remover
+- Admin vê botões Editar (link) e Remover (confirm dialog)
+- Página `/itens`: Promise.all(getById + getByContrato), botão "Adicionar Item" (admin)
+- Link "Gerenciar Itens" adicionado ao card de itens na página de detalhes
+- **REGRA:** `margem_atual`, `saldo_quantidade`, `valor_total` exibidos do banco — NUNCA recalculados (Decisão #3)
 
 ## ✅ Critérios
-- [ ] Itens listados corretamente
-- [ ] MargemIndicator mostra cores (verde/amarelo/vermelho)
-- [ ] **TESTE:** margem_atual não recalculada no frontend
+- [x] Itens listados corretamente com todas colunas
+- [x] MargemIndicator mostra cores (verde/amarelo/vermelho)
+- [x] **TESTE:** margem_atual não recalculada no frontend
+- [x] Soft delete inline (botão ✕) com confirmação
+- [x] LoadingSkeleton durante fetch
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
-**Status:** ⏳ Aguardando | **Criado:** @sm (River) - 2026-02-13
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
