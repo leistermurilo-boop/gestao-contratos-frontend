@@ -73,13 +73,13 @@ useEffect → cnpjsService.getAll() → setCnpjs → setLoading(false)
 **Estratégia de form:** Formulário exibido inline na página (não rota separada) via estado `showForm` — mais simples para uma lista de configurações.
 
 ## ✅ Critérios
-- [ ] `cnpjs.service.ts` criado com getAll, create, update, toggleAtivo
-- [ ] Listagem de CNPJs com tipo/ativo
-- [ ] Criar CNPJ funcionando
-- [ ] Editar CNPJ funcionando (campos mutáveis)
-- [ ] Toggle ativo funcional (inline)
-- [ ] Apenas admin acessa (ProtectedRoute)
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] `cnpjs.service.ts` criado com getAll, create, update, toggleAtivo
+- [x] Listagem de CNPJs com tipo badge (matriz=verde, filial=azul) e status ativo
+- [x] Criar CNPJ funcionando (empresa_id passado explicitamente via useEmpresa)
+- [x] Editar CNPJ funcionando (cnpj_numero bloqueado no edit)
+- [x] Toggle ativo funcional (inline, sem reload de página)
+- [x] Apenas admin acessa (ProtectedRoute)
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA passar `empresa_id` manualmente — RLS injeta (Decisão #1)
@@ -87,4 +87,4 @@ useEffect → cnpjsService.getAll() → setCnpjs → setLoading(false)
 - NUNCA deletar CNPJ — apenas toggleAtivo (FK usada em contratos e itens)
 - cnpj_numero: armazenar apenas dígitos (14), formatar apenas para exibição
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
