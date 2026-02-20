@@ -37,6 +37,7 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute =
     request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname.startsWith('/login') ||
+    request.nextUrl.pathname.startsWith('/cadastro') ||
     request.nextUrl.pathname.startsWith('/register') ||
     request.nextUrl.pathname.startsWith('/recuperar-senha') ||
     request.nextUrl.pathname.startsWith('/callback') // Callback do Supabase (reset senha, OAuth)

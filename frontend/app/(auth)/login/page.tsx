@@ -42,6 +42,8 @@ export default function LoginPage() {
     const successParam = searchParams.get('success')
     if (successParam === 'reset') {
       setSuccess('Email de recuperação enviado! Verifique sua caixa de entrada.')
+    } else if (successParam === 'confirm-email') {
+      setSuccess('Conta criada! Confirme seu email antes de fazer login.')
     }
   }, [searchParams])
 
@@ -137,7 +139,10 @@ export default function LoginPage() {
       </CardContent>
       <CardFooter className="flex flex-col space-y-2">
         <div className="text-sm text-muted-foreground text-center">
-          Sistema multi-tenant com Supabase
+          Não tem uma conta?{' '}
+          <Link href="/cadastro" className="text-blue-600 hover:underline font-medium">
+            Criar conta
+          </Link>
         </div>
       </CardFooter>
     </Card>
