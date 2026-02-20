@@ -41,7 +41,7 @@ export default function NovoCustoPage() {
         <div>
           <div className="mb-1">
             <Link
-              href={`/contratos/${contratoId}/itens/${itemId}/custos`}
+              href={`/dashboard/contratos/${contratoId}/itens/${itemId}/custos`}
               className="text-xs text-slate-400 hover:text-slate-600"
             >
               ← Histórico de Custos

@@ -111,16 +111,16 @@ Páginas que DEVEM ter ProtectedRoute com perfis corretos:
 | autorizacoes/[id]/entregas/nova | admin, juridico, compras, logistica |
 
 ## ✅ Critérios
-- [ ] Bug de roteamento corrigido — URLs corretas no browser
-- [ ] Sidebar links funcionando para todas as rotas
-- [ ] `npx tsc --noEmit` → 0 erros
-- [ ] `npm run lint` → 0 warnings
-- [ ] Auditoria de regras críticas concluída
-- [ ] Todas as páginas com ProtectedRoute correto
+- [x] Bug de roteamento corrigido — URLs corretas no browser
+- [x] Sidebar links funcionando para todas as rotas
+- [x] `npx tsc --noEmit` → 0 erros
+- [x] `npm run lint` → 0 warnings
+- [x] Auditoria de regras críticas concluída
+- [x] Todas as páginas com ProtectedRoute correto
 
 ## ⚠️ Notas
 - Ao mover arquivos no Windows: criar na pasta destino → copiar conteúdo → deletar original
 - Testar navegação completa após mover (não só o build)
 - Verificar link "Meu Perfil" na sidebar → `/dashboard/perfil` (adicionar se não existir)
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21

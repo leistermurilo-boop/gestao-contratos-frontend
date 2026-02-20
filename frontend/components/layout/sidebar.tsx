@@ -100,7 +100,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Rodapé com info do usuário */}
         {usuario && (
           <div className="border-t border-white/10 p-4">
-            <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/perfil"
+              onClick={onClose}
+              className="flex items-center gap-3 rounded-lg px-1 py-1 transition-colors hover:bg-white/10"
+            >
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
                 <span className="text-xs font-medium uppercase">
                   {usuario.nome?.charAt(0) ?? 'U'}
@@ -110,7 +114,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <p className="truncate text-sm font-medium leading-tight">{usuario.nome}</p>
                 <p className="mt-0.5 text-xs capitalize text-white/50">{usuario.perfil}</p>
               </div>
-            </div>
+            </Link>
           </div>
         )}
       </aside>

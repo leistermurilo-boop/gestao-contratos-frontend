@@ -85,7 +85,7 @@ export default function CustosItemPage() {
           <div>
             <div className="mb-1 flex items-center gap-2">
               <Link
-                href={`/contratos/${contratoId}/itens`}
+                href={`/dashboard/contratos/${contratoId}/itens`}
                 className="text-xs text-slate-400 hover:text-slate-600"
               >
                 ← Itens do Contrato
@@ -104,7 +104,7 @@ export default function CustosItemPage() {
 
           {canRegistrar && (
             <Button asChild className="bg-brand-navy hover:bg-brand-navy/90">
-              <Link href={`/contratos/${contratoId}/itens/${itemId}/custos/novo`}>
+              <Link href={`/dashboard/contratos/${contratoId}/itens/${itemId}/custos/novo`}>
                 <Plus className="mr-2 h-4 w-4" />
                 Registrar Custo
               </Link>
