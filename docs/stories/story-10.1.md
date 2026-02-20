@@ -60,13 +60,13 @@ useEffect → entregasService.getAll() → setEntregas → setLoading(false)
 ```
 
 ## ✅ Critérios
-- [ ] Entregas listadas com relações (AF, item, contrato)
-- [ ] Filtro por AF ou NF funcionando (client-side)
-- [ ] Link para AF abre detalhes corretamente
-- [ ] nf_saida_numero exibido (não nota_fiscal_saida)
-- [ ] Sem botão de excluir/editar (imutabilidade)
-- [ ] LoadingSkeleton durante fetch
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] Entregas listadas com relações (AF, item, contrato)
+- [x] Filtro por AF ou NF funcionando (client-side)
+- [x] Link "Ver AF" abre detalhes da AF corretamente
+- [x] nf_saida_numero exibido com link se anexo_nf_url presente
+- [x] Sem botão de excluir/editar (imutabilidade respeitada)
+- [x] LoadingSkeleton durante fetch
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA exibir botão de excluir/editar — entregas não têm `deleted_at`
@@ -74,4 +74,4 @@ useEffect → entregasService.getAll() → setEntregas → setLoading(false)
 - NUNCA passar `empresa_id` ao service — RLS injeta (Decisão #1)
 - `entregasService.getAll()` ordenado por `data_entrega DESC` ✅
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
