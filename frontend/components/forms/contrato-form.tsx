@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { FileText } from 'lucide-react'
 import {
   Form,
   FormControl,
@@ -28,6 +29,7 @@ import { uploadService } from '@/lib/services/upload.service'
 import { useEmpresa } from '@/contexts/empresa-context'
 import { BUCKETS } from '@/lib/constants/buckets'
 import { createClient } from '@/lib/supabase/client'
+import { type ContratoWithRelations } from '@/types/models'
 import toast from 'react-hot-toast'
 
 const contratoSchema = z
@@ -57,7 +59,15 @@ interface CnpjOption {
   razao_social: string
 }
 
-export function ContratoForm() {
+interface ContratoFormProps {
+  mode?: 'create' | 'edit'
+  /** ID do contrato — obrigatório quando mode='edit' */
+  contratoId?: string
+  /** Dados existentes para pré-preenchimento — obrigatório quando mode='edit' */
+  initialData?: ContratoWithRelations
+}
+
+export function ContratoForm({ mode = 'create', contratoId, initialData }: ContratoFormProps) {
   const router = useRouter()
   const { empresa } = useEmpresa()
   const [cnpjs, setCnpjs] = useState<CnpjOption[]>([])
@@ -80,6 +90,27 @@ export function ContratoForm() {
       cnpj_orgao: '',
     },
   })
+
+  const { reset } = form
+
+  // Pré-preencher form em modo edição
+  useEffect(() => {
+    if (mode === 'edit' && initialData) {
+      reset({
+        cnpj_id: initialData.cnpj_id,
+        numero_contrato: initialData.numero_contrato,
+        orgao_publico: initialData.orgao_publico,
+        valor_total: initialData.valor_total,
+        data_assinatura: initialData.data_assinatura,
+        data_vigencia_inicio: initialData.data_vigencia_inicio,
+        data_vigencia_fim: initialData.data_vigencia_fim,
+        objeto: initialData.objeto ?? '',
+        esfera: initialData.esfera ?? '',
+        indice_reajuste: initialData.indice_reajuste ?? '',
+        cnpj_orgao: initialData.cnpj_orgao ?? '',
+      })
+    }
+  }, [mode, initialData, reset])
 
   // Carregar CNPJs da empresa (RLS filtra automaticamente)
   useEffect(() => {
@@ -107,10 +138,9 @@ export function ContratoForm() {
 
     setSubmitting(true)
     try {
-      let anexo_url: string | null = null
-
       // Upload do documento se selecionado
       // ⚠️ REGRA UPLOAD: Path empresa_id/contrato_${numero}.ext
+      let novaAnexoUrl: string | undefined
       if (file) {
         const validation = uploadService.validateFile(file, BUCKETS.CONTRATOS)
         if (!validation.valid) {
@@ -121,33 +151,58 @@ export function ContratoForm() {
         const safeName = values.numero_contrato.replace(/[^a-zA-Z0-9]/g, '_')
         const path = `${empresa.id}/contrato_${safeName}_${Date.now()}.${ext}`
         const result = await uploadService.upload(BUCKETS.CONTRATOS, empresa.id, file, path)
-        anexo_url = result.url
+        novaAnexoUrl = result.url
       }
 
-      // ⚠️ REGRA RLS: empresa_id NÃO passado — injetado automaticamente pelo banco
-      const novo = await contratosService.create({
-        cnpj_id: values.cnpj_id,
-        numero_contrato: values.numero_contrato,
-        orgao_publico: values.orgao_publico,
-        valor_total: values.valor_total,
-        data_assinatura: values.data_assinatura,
-        data_vigencia_inicio: values.data_vigencia_inicio,
-        data_vigencia_fim: values.data_vigencia_fim,
-        objeto: values.objeto || null,
-        esfera: (values.esfera as 'municipal' | 'estadual' | 'federal') || null,
-        indice_reajuste: values.indice_reajuste || null,
-        cnpj_orgao: values.cnpj_orgao || null,
-        anexo_url,
-      })
-
-      toast.success('Contrato criado com sucesso!')
-      router.push(`/dashboard/contratos/${novo.id}`)
+      if (mode === 'edit' && contratoId) {
+        // ⚠️ REGRA RLS: empresa_id e id NUNCA passados — ContratoUpdateSeguro garante em compile-time
+        await contratosService.update(contratoId, {
+          cnpj_id: values.cnpj_id,
+          numero_contrato: values.numero_contrato,
+          orgao_publico: values.orgao_publico,
+          valor_total: values.valor_total,
+          data_assinatura: values.data_assinatura,
+          data_vigencia_inicio: values.data_vigencia_inicio,
+          data_vigencia_fim: values.data_vigencia_fim,
+          objeto: values.objeto || null,
+          esfera: (values.esfera as 'municipal' | 'estadual' | 'federal') || null,
+          indice_reajuste: values.indice_reajuste || null,
+          cnpj_orgao: values.cnpj_orgao || null,
+          // Só atualiza anexo_url se novo arquivo enviado
+          ...(novaAnexoUrl !== undefined && { anexo_url: novaAnexoUrl }),
+        })
+        toast.success('Contrato atualizado com sucesso!')
+        router.push(`/dashboard/contratos/${contratoId}`)
+      } else {
+        // ⚠️ REGRA RLS: empresa_id NÃO passado — injetado automaticamente pelo banco
+        const novo = await contratosService.create({
+          cnpj_id: values.cnpj_id,
+          numero_contrato: values.numero_contrato,
+          orgao_publico: values.orgao_publico,
+          valor_total: values.valor_total,
+          data_assinatura: values.data_assinatura,
+          data_vigencia_inicio: values.data_vigencia_inicio,
+          data_vigencia_fim: values.data_vigencia_fim,
+          objeto: values.objeto || null,
+          esfera: (values.esfera as 'municipal' | 'estadual' | 'federal') || null,
+          indice_reajuste: values.indice_reajuste || null,
+          cnpj_orgao: values.cnpj_orgao || null,
+          anexo_url: novaAnexoUrl ?? null,
+        })
+        toast.success('Contrato criado com sucesso!')
+        router.push(`/dashboard/contratos/${novo.id}`)
+      }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro ao criar contrato')
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar contrato')
     } finally {
       setSubmitting(false)
     }
   }
+
+  const cancelHref =
+    mode === 'edit' && contratoId
+      ? `/dashboard/contratos/${contratoId}`
+      : '/dashboard/contratos'
 
   return (
     <Form {...form}>
@@ -348,6 +403,22 @@ export function ContratoForm() {
           <p className="text-sm font-medium leading-none text-slate-700">
             Documento do Contrato
           </p>
+          {/* Mostrar arquivo atual em modo edição */}
+          {mode === 'edit' && initialData?.anexo_url && !file && (
+            <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              <FileText className="h-3 w-3 flex-shrink-0" />
+              <span>Arquivo atual:</span>
+              <a
+                href={initialData.anexo_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-blue-600 hover:underline"
+              >
+                Ver documento
+              </a>
+              <span className="text-slate-400">— envie um novo para substituir</span>
+            </div>
+          )}
           <input
             type="file"
             accept=".pdf,.doc,.docx"
@@ -362,7 +433,7 @@ export function ContratoForm() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push('/dashboard/contratos')}
+            onClick={() => router.push(cancelHref)}
             disabled={submitting}
           >
             Cancelar
@@ -372,7 +443,7 @@ export function ContratoForm() {
             disabled={submitting}
             className="bg-brand-navy hover:bg-brand-navy/90"
           >
-            {submitting ? 'Salvando...' : 'Criar Contrato'}
+            {submitting ? 'Salvando...' : mode === 'edit' ? 'Salvar Alterações' : 'Criar Contrato'}
           </Button>
         </div>
       </form>

@@ -79,7 +79,7 @@ frontend/
 - [x] Story 6.1: Lista de Contratos ← **CONCLUÍDA**
 - [x] Story 6.2: Criar Contrato ← **CONCLUÍDA**
 - [x] Story 6.3: Detalhes do Contrato ← **CONCLUÍDA HOJE**
-- [ ] Story 6.4: Editar Contrato ← **PRÓXIMA**
+- [x] Story 6.4: Editar Contrato ← **CONCLUÍDA**
 - [ ] Story 6.5: ...
 
 ---
@@ -214,9 +214,9 @@ npx tsc --noEmit
 ---
 
 **Última atualização:** 2026-02-21
-**Status:** ✅ Fases 1–5 + Stories 6.1–6.3 COMPLETAS (22 stories — ~52%)
-**Próxima ação:** Story 6.4 — Editar Contrato
+**Status:** ✅ Fases 1–5 + Stories 6.1–6.4 COMPLETAS (23 stories — ~55%)
+**Próxima ação:** Story 6.5 — (a definir: Deletar Contrato / Próximos módulos)
 
 ---
 
-💻 **@dev — Story 6.3 concluída! Página de detalhes com dados completos + itens + MargemIndicator. Pronto para Story 6.4 (Editar).**
+💻 **@dev — Story 6.4 concluída! Edição de contrato com ContratoForm reutilizado, pré-preenchimento, upload preservado e ContratoUpdateSeguro. Pronto para Story 6.5.**
