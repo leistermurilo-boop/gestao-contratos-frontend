@@ -102,13 +102,13 @@ Fecha modal após sucesso + recarrega lista de usuários
 ```
 
 ## ✅ Critérios
-- [ ] Listagem de usuários da empresa funcionando
-- [ ] Toggle ativo funcional
-- [ ] Convidar usuário via modal → email enviado pelo Supabase
-- [ ] SUPABASE_SERVICE_ROLE_KEY nunca exposta no cliente (apenas API Route)
-- [ ] API Route valida autenticação + perfil admin antes de executar
-- [ ] Apenas admin acessa a página (ProtectedRoute)
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] Listagem de usuários da empresa funcionando (query direta na página)
+- [x] Toggle ativo funcional (inline, sem reload)
+- [x] Convidar usuário via modal → POST /api/usuarios/invite → email enviado pelo Supabase
+- [x] SUPABASE_SERVICE_ROLE_KEY nunca exposta no cliente (apenas API Route server-side)
+- [x] API Route valida autenticação + perfil admin antes de executar
+- [x] Apenas admin acessa a página (ProtectedRoute)
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA usar SERVICE_ROLE_KEY em código cliente (Decisão #8)
@@ -117,4 +117,4 @@ Fecha modal após sucesso + recarrega lista de usuários
 - O id do usuario na tabela `usuarios` DEVE ser igual ao id do auth.user criado (FK)
 - Adicionar `SUPABASE_SERVICE_ROLE_KEY` ao `.env.local` E às variáveis de ambiente Vercel (Story 12.3)
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
