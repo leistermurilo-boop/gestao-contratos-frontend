@@ -76,15 +76,15 @@ SUPABASE_SERVICE_ROLE_KEY=    # Obter em: Supabase → Settings → API → serv
 ```
 
 ## ✅ Critérios
-- [ ] `npm run build` → 0 erros
-- [ ] `npm run start` → app funcional em produção local
-- [ ] `.env.local.example` atualizado com SUPABASE_SERVICE_ROLE_KEY
-- [ ] `.env.local` no `.gitignore` (nunca commitar chaves)
-- [ ] Variáveis documentadas para configuração no Vercel
+- [x] `npm run build` → 0 erros
+- [x] `npm run start` → app funcional em produção local
+- [x] `.env.example` atualizado com SUPABASE_SERVICE_ROLE_KEY
+- [x] `.env.local` no `.gitignore` (nunca commitar chaves)
+- [x] Variáveis documentadas para configuração no Vercel
 
 ## ⚠️ Regras Críticas
 - NUNCA commitar `.env.local` com chaves reais
 - `SUPABASE_SERVICE_ROLE_KEY` NUNCA deve aparecer em código cliente (apenas API Routes)
 - Confirmar que `NEXT_PUBLIC_*` vars SÃO seguras para expor (anon_key é pública por design do Supabase)
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Criado:** @sm/@architect — 2026-02-21 | **Concluído:** 2026-02-20

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
-export default function LoginPage() {
+function LoginForm() {
   const { signIn } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -66,9 +66,9 @@ export default function LoginPage() {
         }
       }
       // Se não há redirect, signIn já redireciona para /dashboard
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro no login:', err)
-      const raw: string = err?.message ?? ''
+      const raw: string = err instanceof Error ? err.message : ''
       if (raw.toLowerCase().includes('email not confirmed')) {
         setError('Email não confirmado. Verifique sua caixa de entrada e clique no link enviado.')
       } else if (raw.toLowerCase().includes('invalid login credentials') || raw.toLowerCase().includes('invalid credentials')) {
@@ -153,5 +153,19 @@ export default function LoginPage() {
         </div>
       </CardFooter>
     </Card>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <Card>
+        <CardContent className="flex min-h-[300px] items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-navy" />
+        </CardContent>
+      </Card>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
