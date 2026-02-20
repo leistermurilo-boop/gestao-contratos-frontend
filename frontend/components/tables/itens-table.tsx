@@ -26,6 +26,7 @@ interface ItensTableProps {
   loading: boolean
   isAdmin: boolean
   onDelete: (id: string) => Promise<void>
+  canViewCustos?: boolean
 }
 
 function SkeletonRows() {
@@ -47,7 +48,9 @@ function SkeletonRows() {
   )
 }
 
-export function ItensTable({ contratoId, itens, loading, isAdmin, onDelete }: ItensTableProps) {
+export function ItensTable({ contratoId, itens, loading, isAdmin, onDelete, canViewCustos }: ItensTableProps) {
+  const showAcoes = isAdmin || canViewCustos
+
   return (
     <Table>
       <TableHeader>
@@ -59,7 +62,7 @@ export function ItensTable({ contratoId, itens, loading, isAdmin, onDelete }: It
           <TableHead className="text-right font-semibold text-slate-700">Saldo</TableHead>
           <TableHead className="text-right font-semibold text-slate-700">Vlr Unit.</TableHead>
           <TableHead className="font-semibold text-slate-700">Margem</TableHead>
-          {isAdmin && (
+          {showAcoes && (
             <TableHead className="text-right font-semibold text-slate-700">Ações</TableHead>
           )}
         </TableRow>
@@ -70,7 +73,7 @@ export function ItensTable({ contratoId, itens, loading, isAdmin, onDelete }: It
         ) : itens.length === 0 ? (
           <TableRow>
             <TableCell
-              colSpan={isAdmin ? 8 : 7}
+              colSpan={showAcoes ? 8 : 7}
               className="py-12 text-center text-sm text-slate-400"
             >
               Nenhum item cadastrado neste contrato
@@ -98,29 +101,43 @@ export function ItensTable({ contratoId, itens, loading, isAdmin, onDelete }: It
               <TableCell>
                 <MargemIndicator margem={item.margem_atual} showIcon={false} />
               </TableCell>
-              {isAdmin && (
+              {showAcoes && (
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/dashboard/contratos/${contratoId}/itens/${item.id}/editar`}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Link>
-                    </Button>
-                    <ConfirmDialog
-                      trigger={
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                    {canViewCustos && (
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link
+                          href={`/contratos/${contratoId}/itens/${item.id}/custos`}
+                          className="text-slate-600"
                         >
-                          ✕
+                          Custos
+                        </Link>
+                      </Button>
+                    )}
+                    {isAdmin && (
+                      <>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/dashboard/contratos/${contratoId}/itens/${item.id}/editar`}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Link>
                         </Button>
-                      }
-                      title="Remover item?"
-                      description={`"${item.descricao}" será removido do contrato. Esta ação não pode ser desfeita pelo usuário.`}
-                      confirmLabel="Remover"
-                      onConfirm={() => onDelete(item.id)}
-                    />
+                        <ConfirmDialog
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                            >
+                              ✕
+                            </Button>
+                          }
+                          title="Remover item?"
+                          description={`"${item.descricao}" será removido do contrato. Esta ação não pode ser desfeita pelo usuário.`}
+                          confirmLabel="Remover"
+                          onConfirm={() => onDelete(item.id)}
+                        />
+                      </>
+                    )}
                   </div>
                 </TableCell>
               )}

@@ -11,7 +11,7 @@ import { ItensTable } from '@/components/tables/itens-table'
 import { contratosService } from '@/lib/services/contratos.service'
 import { itensService } from '@/lib/services/itens.service'
 import { useAuth } from '@/contexts/auth-context'
-import { PERFIS } from '@/lib/constants/perfis'
+import { PERFIS, canViewCosts } from '@/lib/constants/perfis'
 import { type ContratoWithRelations, type ItemContrato } from '@/types/models'
 import toast from 'react-hot-toast'
 
@@ -63,6 +63,7 @@ export default function ItensContratoPage() {
   }
 
   const isAdmin = usuario?.perfil === PERFIS.admin
+  const canViewCustos = usuario ? canViewCosts(usuario.perfil) : false
 
   return (
     <div className="space-y-6">
@@ -130,6 +131,7 @@ export default function ItensContratoPage() {
             loading={loading}
             isAdmin={isAdmin}
             onDelete={handleDelete}
+            canViewCustos={canViewCustos}
           />
         </CardContent>
       </Card>

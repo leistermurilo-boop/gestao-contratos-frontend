@@ -69,17 +69,17 @@ Colunas: Data Lançamento | Custo Unit. | Qtd | Total | Fornecedor | NF | Obs
 - logistica → redirecionada (RLS também bloqueia no banco)
 
 ## ✅ Critérios
-- [ ] custo_medio e margem_atual exibidos do banco sem recalcular
-- [ ] Lançamentos ordenados por data_lancamento DESC
-- [ ] Link "Ver NF" abre nf_entrada_url em nova aba quando presente
-- [ ] Botão "Registrar Custo" visível apenas para admin, financeiro, compras
-- [ ] logistica não acessa (ProtectedRoute)
-- [ ] LoadingSkeleton durante fetch
-- [ ] TypeScript: 0 erros | ESLint: 0 warnings
+- [x] custo_medio e margem_atual exibidos do banco sem recalcular
+- [x] Lançamentos ordenados por data_lancamento DESC
+- [x] Link "Ver NF" abre nf_entrada_url em nova aba quando presente
+- [x] Botão "Registrar Custo" visível apenas para admin, financeiro, compras
+- [x] logistica não acessa (ProtectedRoute)
+- [x] LoadingSkeleton durante fetch
+- [x] TypeScript: 0 erros | ESLint: 0 warnings
 
 ## ⚠️ Regras Críticas
 - NUNCA recalcular `custo_medio` ou `margem_atual` — exibir do banco (Decisão #3)
 - NUNCA passar `empresa_id` ao service — RLS injeta (Decisão #1)
 - `custosService.getByItem(itemId)` usa `item_contrato_id` internamente ✅
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Implementado:** @dev | **Data:** 2026-02-21
