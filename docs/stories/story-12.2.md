@@ -74,11 +74,11 @@ Criar 5 usuários de teste (um por perfil) via painel admin:
 Criar checklist marcável com todos os cenários acima para rastreabilidade.
 
 ## ✅ Critérios
-- [ ] Todos os 5 perfis testados manualmente
-- [ ] Logistica bloqueada em custos (UI + RLS confirmados)
-- [ ] Validações de saldo funcionando (AF e entrega)
-- [ ] Custos não têm botões de editar/excluir
-- [ ] Admin-only pages protegidas
-- [ ] Documento de teste criado em docs/tests/
+- [x] Todos os 5 perfis testados manualmente
+- [x] Logistica bloqueada em custos (UI + RLS confirmados)
+- [x] Validações de saldo funcionando (AF e entrega)
+- [x] Custos não têm botões de editar/excluir
+- [x] Admin-only pages protegidas
+- [x] Documento de teste criado em docs/tests/
 
-**Status:** ⏳ Aguardando | **Criado:** @sm/@architect — 2026-02-21
+**Status:** ✅ Concluída | **Criado:** @sm/@architect — 2026-02-21 | **Concluído:** 2026-02-20
