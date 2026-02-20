@@ -44,18 +44,20 @@ export default function CadastroPage() {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          // Garante que o link de confirmação retorne para o callback correto
+          emailRedirectTo: `${window.location.origin}/callback`,
+        },
       })
 
       if (authError) throw new Error(authError.message)
       if (!authData.user) throw new Error('Erro ao criar credenciais. Tente novamente.')
 
-      // 2. Verificar se há sessão (confirmação de email desabilitada = sessão imediata)
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        // Confirmação de email está habilitada no Supabase
+      // 2. authData.session é null quando "Confirm Email" está ativado no Supabase.
+      //    NÃO usar getSession() aqui — pode retornar sessão temporária do signUp mesmo
+      //    com confirmação obrigatória, causando erro nas inserções seguintes.
+      if (!authData.session) {
+        // Confirmação de email obrigatória — usuário deve confirmar antes de continuar
         router.push('/login?success=confirm-email')
         return
       }

@@ -9,10 +9,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <Image
             src="/logo.svg"
             alt="DUO Governance"
-            width={120}
-            height={120}
+            width={200}
+            height={200}
             priority
-            className="opacity-90"
           />
         </div>
 

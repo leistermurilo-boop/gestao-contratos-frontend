@@ -68,7 +68,14 @@ export default function LoginPage() {
       // Se não há redirect, signIn já redireciona para /dashboard
     } catch (err: any) {
       console.error('Erro no login:', err)
-      setError(err.message || 'Erro ao fazer login. Verifique suas credenciais.')
+      const raw: string = err?.message ?? ''
+      if (raw.toLowerCase().includes('email not confirmed')) {
+        setError('Email não confirmado. Verifique sua caixa de entrada e clique no link enviado.')
+      } else if (raw.toLowerCase().includes('invalid login credentials') || raw.toLowerCase().includes('invalid credentials')) {
+        setError('Email ou senha incorretos.')
+      } else {
+        setError(raw || 'Erro ao fazer login. Tente novamente.')
+      }
     } finally {
       setLoading(false)
     }
