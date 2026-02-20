@@ -25,7 +25,7 @@ export class ContratosService {
       .select(`
         *,
         cnpj:cnpjs (
-          cnpj,
+          cnpj_numero,
           razao_social
         )
       `)

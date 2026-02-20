@@ -75,9 +75,9 @@ frontend/
 - [x] Story 5.2: Gráficos do Dashboard ← **CONCLUÍDA**
 - [x] Story 5.3: Alertas do Dashboard ← **CONCLUÍDA HOJE**
 
-### ⏳ Fase 6: Contratos (0%)
-- [ ] Story 6.1: Lista de Contratos
-- [ ] Story 6.2: Formulário de Contrato
+### ⏳ Fase 6: Contratos (EM ANDAMENTO — ~20%)
+- [x] Story 6.1: Lista de Contratos ← **CONCLUÍDA HOJE**
+- [ ] Story 6.2: Formulário de Contrato ← **PRÓXIMA**
 - [ ] ...
 
 ---
@@ -212,9 +212,9 @@ npx tsc --noEmit
 ---
 
 **Última atualização:** 2026-02-21
-**Status:** ✅ Fases 1–5 COMPLETAS (19 stories — 45% do projeto)
-**Próxima ação:** Story 6.1 — Lista de Contratos (primeira tabela de dados reais)
+**Status:** ✅ Fases 1–5 COMPLETAS + Story 6.1 COMPLETA (20 stories — ~48%)
+**Próxima ação:** Story 6.2 — Formulário de Contrato
 
 ---
 
-💻 **@dev — Fase 5 (Dashboard) 100% concluída! Métricas + Gráficos + Alertas. Pronto para Story 6.1 (Lista de Contratos).**
+💻 **@dev — Story 6.1 concluída! Primeira tabela de dados reais: lista de contratos com filtros e StatusBadge. Pronto para Story 6.2.**
