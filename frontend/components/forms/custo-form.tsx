@@ -91,7 +91,7 @@ export function CustoForm({ contratoId, itemId }: CustoFormProps) {
 
       toast.success('Custo registrado com sucesso!')
       router.refresh()
-      router.push(`/contratos/${contratoId}/itens/${itemId}/custos`)
+      router.push(`/dashboard/contratos/${contratoId}/itens/${itemId}/custos`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao registrar custo')
     }
@@ -216,7 +216,7 @@ export function CustoForm({ contratoId, itemId }: CustoFormProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push(`/contratos/${contratoId}/itens/${itemId}/custos`)}
+            onClick={() => router.push(`/dashboard/contratos/${contratoId}/itens/${itemId}/custos`)}
             disabled={isSubmitting}
           >
             Cancelar

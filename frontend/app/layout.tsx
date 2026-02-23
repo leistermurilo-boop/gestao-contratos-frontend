@@ -8,7 +8,9 @@ export const metadata: Metadata = {
   title: "DUO Governance - Gestão de Contratos",
   description: "Sistema de gestão de contratos multi-tenant",
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
   },
 }
 

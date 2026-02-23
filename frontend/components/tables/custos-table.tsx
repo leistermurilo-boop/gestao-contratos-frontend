@@ -110,7 +110,7 @@ export function CustosTable() {
                 const itemId = custo.item_contrato_id
                 const historicoHref =
                   contratoId
-                    ? `/contratos/${contratoId}/itens/${itemId}/custos`
+                    ? `/dashboard/contratos/${contratoId}/itens/${itemId}/custos`
                     : null
 
                 return (

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
@@ -49,8 +50,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         {/* Logo e empresa */}
         <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-emerald">
-            <span className="text-xs font-bold text-white">DG</span>
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center">
+            <Image src="/logo.svg" alt="DUO Governance" width={32} height={32} priority />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold leading-tight">DUO Governance</p>

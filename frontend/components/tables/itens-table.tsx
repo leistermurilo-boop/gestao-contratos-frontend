@@ -107,7 +107,7 @@ export function ItensTable({ contratoId, itens, loading, isAdmin, onDelete, canV
                     {canViewCustos && (
                       <Button variant="ghost" size="sm" asChild>
                         <Link
-                          href={`/contratos/${contratoId}/itens/${item.id}/custos`}
+                          href={`/dashboard/contratos/${contratoId}/itens/${item.id}/custos`}
                           className="text-slate-600"
                         >
                           Custos
