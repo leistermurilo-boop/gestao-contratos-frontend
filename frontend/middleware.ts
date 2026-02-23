@@ -14,13 +14,17 @@ export async function middleware(request: NextRequest) {
         get(name: string) {
           return request.cookies.get(name)?.value
         },
+        // Padrão correto: atualiza request E response para que cookies
+        // refreshados sejam propagados corretamente no mesmo ciclo de request.
         set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({ name, value, ...options })
           response = NextResponse.next({
             request: { headers: request.headers },
           })
           response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
+          request.cookies.set({ name, value: '', ...options })
           response = NextResponse.next({
             request: { headers: request.headers },
           })
@@ -30,54 +34,37 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // 1. Refresh session if expired
+  // 1. Refresh de sessão — obrigatório para manter tokens atualizados nos cookies.
+  //    NÃO fazer queries adicionais ao banco aqui: o Edge Runtime não é adequado
+  //    para lógica de negócio e queries podem causar race conditions e loops.
   const { data: { session } } = await supabase.auth.getSession()
 
-  // 2. Define rotas públicas (não requerem autenticação)
-  const isPublicRoute =
-    request.nextUrl.pathname === '/' ||
-    request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/cadastro') ||
-    request.nextUrl.pathname.startsWith('/register') ||
-    request.nextUrl.pathname.startsWith('/recuperar-senha') ||
-    request.nextUrl.pathname.startsWith('/callback') // Callback do Supabase (reset senha, OAuth)
+  const { pathname } = request.nextUrl
 
-  // 3. Se em /login e já autenticado → redireciona para dashboard
-  if (request.nextUrl.pathname.startsWith('/login') && session) {
+  // 2. Rotas públicas — não requerem autenticação
+  const isPublicRoute =
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/cadastro') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/recuperar-senha') ||
+    pathname.startsWith('/callback')
+
+  // 3. Usuário autenticado tentando acessar /login → redireciona para dashboard
+  if (pathname.startsWith('/login') && session) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // 4. Se rota protegida e não autenticado → redireciona para login com redirect param
+  // 4. Rota protegida sem sessão → redireciona para login
   if (!isPublicRoute && !session) {
     const redirectUrl = new URL('/login', request.url)
-    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+    redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // 5. ⚠️ CRÍTICO: Verificar usuario.ativo em TODA request autenticada
-  if (session) {
-    const { data: usuario, error } = await supabase
-      .from('usuarios')
-      .select('ativo')
-      .eq('id', session.user.id)
-      .single()
-
-    // Erro de banco ou RLS → signOut + redirect com error=db
-    if (error || !usuario) {
-      console.error('Erro ao verificar usuário:', error)
-      await supabase.auth.signOut()
-      return NextResponse.redirect(new URL('/login?error=db', request.url))
-    }
-
-    // Usuário inativo → signOut + redirect com error=inactive
-    if (!usuario.ativo) {
-      console.warn('Usuário inativo tentou acessar:', session.user.id)
-      await supabase.auth.signOut()
-      return NextResponse.redirect(new URL('/login?error=inactive', request.url))
-    }
-  }
-
-  // 6. Retornar response
+  // 5. Retornar response com cookies de sessão atualizados
+  //    A verificação de usuario.ativo é feita no AuthContext (client-side),
+  //    que já implementa signOut + redirect para /login?error=inactive.
   return response
 }
 
