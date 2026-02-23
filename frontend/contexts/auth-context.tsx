@@ -96,28 +96,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    // Timeout de segurança: se INITIAL_SESSION nunca disparar (falha de rede,
-    // bug do SDK), garante que loading sai de true após 8s para evitar tela branca infinita.
-    const loadingTimeout = setTimeout(() => {
-      setLoading((prev) => {
-        if (prev) {
-          console.warn('[AuthContext] INITIAL_SESSION timeout — forçando loading=false')
-          return false
-        }
-        return prev
-      })
-    }, 8000)
+    let initialSessionHandled = false
 
-    // onAuthStateChange como única fonte da verdade.
-    // INITIAL_SESSION é disparado imediatamente com a sessão atual (ou null),
-    // eliminando a necessidade de chamar getSession() manualmente.
+    // onAuthStateChange como fonte principal de verdade.
+    // INITIAL_SESSION dispara imediatamente ao subscrevere com a sessão atual.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (
-          event === 'INITIAL_SESSION' ||
-          event === 'SIGNED_IN' ||
-          event === 'TOKEN_REFRESHED'
-        ) {
+        if (event === 'INITIAL_SESSION') {
+          initialSessionHandled = true
+          await processSession(session)
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           await processSession(session)
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
@@ -127,8 +115,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
+    // Fallback: se INITIAL_SESSION não disparar em 1s (edge case de rede/SDK),
+    // busca a sessão diretamente via getSession() para não ficar em loading infinito.
+    const fallback = setTimeout(async () => {
+      if (!initialSessionHandled) {
+        const { data: { session } } = await supabase.auth.getSession()
+        await processSession(session)
+      }
+    }, 1000)
+
     return () => {
-      clearTimeout(loadingTimeout)
+      clearTimeout(fallback)
       subscription.unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
