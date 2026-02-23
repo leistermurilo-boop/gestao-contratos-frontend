@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { EmpresaProvider } from "@/contexts/empresa-context"
+import { Toaster } from "react-hot-toast"
 
 export const metadata: Metadata = {
   title: "DUO Governance - Gestão de Contratos",
@@ -24,6 +25,7 @@ export default function RootLayout({
             {children}
           </EmpresaProvider>
         </AuthProvider>
+        <Toaster position="top-right" />
       </body>
     </html>
   )
