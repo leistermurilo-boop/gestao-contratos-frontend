@@ -1,11 +1,11 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-02-23 (última atualização)
-**Sessão:** Fase 13 — Hotfixes Pós-Deploy + Logotipo da Empresa
+**Data:** 2026-02-23 (última atualização — fim do dia)
+**Sessão:** Fase 13 — Hotfixes Pós-Deploy + Logotipo + Diagnóstico Definitivo de Sessão + Blueprint IA
 
 ---
 
-## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 23/02/2026)
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 23/02/2026 — COMPLETO)
 
 ### 🔧 Hotfixes Pós-Deploy Aplicados:
 
@@ -40,6 +40,26 @@
 - `sidebar.tsx`: exibe `empresa.logo_url` no topo quando disponível (fallback: DUO logo)
 - `empresas/page.tsx`: card de upload de logotipo com preview inline (admin only)
 
+**Diagnóstico definitivo de logout + page refresh (3 causas raiz corrigidas):**
+
+- **CAUSA 1 — `middleware.ts`** (raiz do logout):
+  API `get/set/remove` do `@supabase/ssr@0.5.x` recriava `NextResponse` a cada `set()`, descartando cookies anteriores. Na renovação de token, o browser recebia apenas 1 dos 2 cookies → sessão expirada na próxima request → redirect para `/login`.
+  Fix: migrado para `getAll()`/`setAll()` + `getUser()` + return `supabaseResponse`.
+
+- **CAUSA 2 — `router.refresh()` em 7 formulários** (raiz do page refresh):
+  Todos os formulários chamavam `router.refresh()` antes de `router.push()`. O `refresh()` força round-trip ao servidor na página atual → flash/reload visível → depois navega.
+  Fix: removido de `af-form`, `contrato-form` (2x), `item-form`, `custo-form`, `entrega-form`, `contratos/[id]/page`.
+
+- **CAUSA 3 — dashboard layout sem debounce** (logout esporádico):
+  `useEffect` disparava `router.push('/login')` imediatamente ao detectar `user=null` durante `TOKEN_REFRESHED` (janela de ~ms). Fix: 400ms de grace period via `useRef`, cancelado se `user` restaurado.
+
+**Blueprint DUO Intelligence (pesquisa/planejamento):**
+- `docs/blueprint-duo-intelligence.md` criado com plano técnico completo:
+  - Pilar 1: Botão "IA Plus" — extração de itens de PDF via Claude claude-sonnet-4-6 nativo
+  - Pilar 2: "Maestro" — newsletter executiva com PNCP + IBGE + BC + Claude
+  - Pilar 3: LGPD — isolamento multi-tenant + DPA notice
+  - Estimativas de custo, roadmap de implementação e referências técnicas
+
 ---
 
 ## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 20/02/2026)
@@ -72,10 +92,15 @@ database/migrations/
 ├── MIGRATION 013.sql   ✅ ADD COLUMN logo_url em empresas
 └── MIGRATION 014.sql   ✅ RLS policies bucket logos
 
+docs/
+└── blueprint-duo-intelligence.md         ✅ Blueprint IA: Extrator PDF + Maestro Newsletter
+
 frontend/
+├── middleware.ts                          🔄 getAll/setAll + getUser() — FIX LOGOUT DEFINITIVO
 ├── package.json                           🔄 @supabase/ssr 0.5.2 + supabase-js 2.97.0
 ├── next.config.mjs                        🔄 Cache-Control + remotePatterns Supabase Storage
 ├── app/
+│   ├── (dashboard)/layout.tsx            🔄 debounce 400ms no redirect — FIX LOGOUT ESPORÁDICO
 │   ├── icon.svg                           ✅ Favicon (file convention App Router)
 │   ├── layout.tsx                         🔄 metadata icons com type svg
 │   ├── error.tsx                          ✅ Error boundary root
@@ -88,12 +113,16 @@ frontend/
 ├── lib/constants/buckets.ts               🔄 + LOGOS bucket
 ├── components/
 │   ├── layout/sidebar.tsx                 🔄 logo empresa (logo_url) + DUO fallback
-│   ├── forms/custo-form.tsx               🔄 getTodayLocal() + default '' nos numéricos
-│   ├── forms/entrega-form.tsx             🔄 getTodayLocal() + default '' na quantidade
+│   ├── forms/af-form.tsx                  🔄 remove router.refresh() — FIX PAGE REFRESH
+│   ├── forms/contrato-form.tsx            🔄 remove router.refresh() (2x)
+│   ├── forms/item-form.tsx                🔄 remove router.refresh()
+│   ├── forms/custo-form.tsx               🔄 remove router.refresh() + getTodayLocal()
+│   ├── forms/entrega-form.tsx             🔄 remove router.refresh() + getTodayLocal()
 │   └── tables/
 │       ├── itens-table.tsx               🔄 fix /dashboard/contratos/ prefix
 │       └── custos-table.tsx              🔄 fix /dashboard/contratos/ prefix
 └── app/(dashboard)/dashboard/
+    ├── contratos/[id]/page.tsx            🔄 remove router.refresh()
     └── empresas/page.tsx                  🔄 card upload logotipo
 ```
 
