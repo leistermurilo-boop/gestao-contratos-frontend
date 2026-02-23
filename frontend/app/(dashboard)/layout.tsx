@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -10,13 +10,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, loading } = useAuth()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    // Redirecionar se não há sessão (após loading)
-    if (!loading && !user) {
-      router.push('/login')
+    // Limpar timer anterior se o estado mudou (ex: TOKEN_REFRESHED restaurou o usuário)
+    if (redirectTimerRef.current) {
+      clearTimeout(redirectTimerRef.current)
+      redirectTimerRef.current = null
     }
-  }, [loading, user, router]) // ✅ Decisão #12: todas as dependências incluídas
+
+    if (!loading && !user) {
+      // Debounce de 400ms: dá tempo ao TOKEN_REFRESHED de restaurar a sessão
+      // antes de redirecionar — evita logout falso durante renovação de token.
+      redirectTimerRef.current = setTimeout(() => {
+        router.push('/login')
+      }, 400)
+    }
+
+    return () => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
+    }
+  }, [loading, user, router])
 
   // Bloquear render enquanto carrega
   if (loading) {

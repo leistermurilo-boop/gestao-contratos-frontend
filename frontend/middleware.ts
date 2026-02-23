@@ -1,47 +1,42 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import type { CookieOptions } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: { headers: request.headers },
-  })
+  // IMPORTANTE: usar supabaseResponse como variável única — nunca criar novo
+  // NextResponse.next() dentro de setAll(), pois isso descartaria cookies já escritos.
+  let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+        getAll() {
+          return request.cookies.getAll()
         },
-        // Padrão correto: atualiza request E response para que cookies
-        // refreshados sejam propagados corretamente no mesmo ciclo de request.
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
-          response.cookies.set({ name, value: '', ...options })
+        // setAll() é chamado em lote — todos os cookies (access + refresh token)
+        // são escritos na mesma instância de supabaseResponse, sem perdas.
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: CookieOptions }>) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options ?? {})
+          )
         },
       },
     }
   )
 
-  // 1. Refresh de sessão — obrigatório para manter tokens atualizados nos cookies.
-  //    NÃO fazer queries adicionais ao banco aqui: o Edge Runtime não é adequado
-  //    para lógica de negócio e queries podem causar race conditions e loops.
-  const { data: { session } } = await supabase.auth.getSession()
+  // getUser() valida o token com o servidor Supabase (mais seguro que getSession()).
+  // Se o access token expirou, utiliza o refresh token para renová-lo automaticamente
+  // e os novos cookies são escritos via setAll() acima.
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
 
-  // 2. Rotas públicas — não requerem autenticação
   const isPublicRoute =
     pathname === '/' ||
     pathname.startsWith('/login') ||
@@ -50,22 +45,24 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/recuperar-senha') ||
     pathname.startsWith('/callback')
 
-  // 3. Usuário autenticado tentando acessar /login → redireciona para dashboard
-  if (pathname.startsWith('/login') && session) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  // Usuário autenticado tentando acessar /login → redireciona para dashboard
+  if (pathname.startsWith('/login') && user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
   }
 
-  // 4. Rota protegida sem sessão → redireciona para login
-  if (!isPublicRoute && !session) {
-    const redirectUrl = new URL('/login', request.url)
-    redirectUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(redirectUrl)
+  // Rota protegida sem sessão → redireciona para login
+  if (!isPublicRoute && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(url)
   }
 
-  // 5. Retornar response com cookies de sessão atualizados
-  //    A verificação de usuario.ativo é feita no AuthContext (client-side),
-  //    que já implementa signOut + redirect para /login?error=inactive.
-  return response
+  // IMPORTANTE: retornar supabaseResponse (não NextResponse.next()) para garantir
+  // que os Set-Cookie headers com os tokens renovados cheguem ao browser.
+  return supabaseResponse
 }
 
 export const config = {

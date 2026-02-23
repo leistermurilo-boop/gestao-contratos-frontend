@@ -88,7 +88,6 @@ export function EntregaForm({ afId, af }: EntregaFormProps) {
       })
 
       toast.success('Entrega registrada com sucesso!')
-      router.refresh()
       router.push(`/dashboard/autorizacoes/${afId}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao registrar entrega')

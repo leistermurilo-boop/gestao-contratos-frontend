@@ -91,7 +91,6 @@ export function CustoForm({ contratoId, itemId }: CustoFormProps) {
       })
 
       toast.success('Custo registrado com sucesso!')
-      router.refresh()
       router.push(`/dashboard/contratos/${contratoId}/itens/${itemId}/custos`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao registrar custo')
