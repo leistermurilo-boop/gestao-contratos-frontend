@@ -378,7 +378,7 @@ export function ContratoForm({ mode = 'create', contratoId, initialData }: Contr
               <FormItem>
                 <FormLabel>CNPJ do Órgão</FormLabel>
                 <FormControl>
-                  <Input placeholder="00000000000000" maxLength={14} {...field} />
+                  <Input placeholder="00000000000000" maxLength={14} {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
