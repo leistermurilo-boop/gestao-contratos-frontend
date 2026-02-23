@@ -96,6 +96,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    // Timeout de segurança: se INITIAL_SESSION nunca disparar (falha de rede,
+    // bug do SDK), garante que loading sai de true após 8s para evitar tela branca infinita.
+    const loadingTimeout = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          console.warn('[AuthContext] INITIAL_SESSION timeout — forçando loading=false')
+          return false
+        }
+        return prev
+      })
+    }, 8000)
+
     // onAuthStateChange como única fonte da verdade.
     // INITIAL_SESSION é disparado imediatamente com a sessão atual (ou null),
     // eliminando a necessidade de chamar getSession() manualmente.
@@ -116,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => {
+      clearTimeout(loadingTimeout)
       subscription.unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
