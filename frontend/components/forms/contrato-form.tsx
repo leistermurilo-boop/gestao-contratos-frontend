@@ -177,6 +177,7 @@ export function ContratoForm({ mode = 'create', contratoId, initialData }: Contr
           ...(novaAnexoUrl !== undefined && { anexo_url: novaAnexoUrl }),
         })
         toast.success('Contrato atualizado com sucesso!')
+        router.refresh()
         router.push(`/dashboard/contratos/${contratoId}`)
       } else {
         // ⚠️ REGRA RLS: empresa_id NÃO passado — injetado automaticamente pelo banco
@@ -195,6 +196,7 @@ export function ContratoForm({ mode = 'create', contratoId, initialData }: Contr
           anexo_url: novaAnexoUrl ?? null,
         })
         toast.success('Contrato criado com sucesso!')
+        router.refresh()
         router.push(`/dashboard/contratos/${novo.id}`)
       }
     } catch (error) {

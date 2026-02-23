@@ -97,6 +97,7 @@ export function ItemForm({ mode = 'create', contratoId, cnpjId, itemId, initialD
         })
         toast.success('Item criado com sucesso!')
       }
+      router.refresh()
       router.push(`/dashboard/contratos/${contratoId}/itens`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao salvar item')

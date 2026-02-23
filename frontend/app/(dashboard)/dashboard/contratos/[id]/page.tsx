@@ -108,6 +108,7 @@ export default function ContratoDetailPage() {
     try {
       await contratosService.softDelete(id, usuario.id)
       toast.success('Contrato arquivado com sucesso!')
+      router.refresh()
       router.push('/dashboard/contratos')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao arquivar contrato')

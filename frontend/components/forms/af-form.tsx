@@ -147,6 +147,7 @@ export function AFForm() {
       })
 
       toast.success('AF emitida com sucesso!')
+      router.refresh()
       router.push('/dashboard/autorizacoes')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao emitir AF')
