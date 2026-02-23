@@ -130,7 +130,7 @@ export function ItemForm({ mode = 'create', contratoId, cnpjId, itemId, initialD
               <FormItem>
                 <FormLabel>Unidade *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: UN, KG, M²" {...field} />
+                  <Input placeholder="Ex: UN, KG, M²" maxLength={50} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

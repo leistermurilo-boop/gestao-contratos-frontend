@@ -193,6 +193,7 @@ export function CnpjForm({ mode, cnpj, onSuccess, onCancel }: CnpjFormProps) {
                 <FormControl>
                   <Input
                     placeholder="Ex: São Paulo"
+                    maxLength={100}
                     {...field}
                     value={field.value ?? ''}
                     disabled={isSubmitting}

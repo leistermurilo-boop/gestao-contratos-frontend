@@ -33,7 +33,9 @@ import toast from 'react-hot-toast'
 
 const reajusteSchema = z.object({
   contrato_id: z.string().min(1, 'Selecione um contrato'),
-  tipo: z.string().min(1, 'Informe o tipo de reajuste'),
+  tipo: z.enum(['ipca', 'igpm', 'inep', 'reequilibrio', 'outro'], {
+    errorMap: () => ({ message: 'Selecione o tipo de reajuste' }),
+  }),
   percentual: z.coerce
     .number({ invalid_type_error: 'Informe um percentual' })
     .positive('Deve ser maior que zero'),
@@ -75,7 +77,7 @@ export function ReajusteForm({ onSuccess, onCancel }: ReajusteFormProps) {
     resolver: zodResolver(reajusteSchema),
     defaultValues: {
       contrato_id: '',
-      tipo: '',
+      tipo: 'ipca',
       percentual: 0,
       indice_referencia: '',
       data_referencia: '',
@@ -162,13 +164,24 @@ export function ReajusteForm({ onSuccess, onCancel }: ReajusteFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Tipo de Reajuste *</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Ex: IPCA, INPC, IGPM"
-                    {...field}
-                    disabled={isSubmitting}
-                  />
-                </FormControl>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={isSubmitting}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="ipca">IPCA</SelectItem>
+                    <SelectItem value="igpm">IGP-M</SelectItem>
+                    <SelectItem value="inep">INEP</SelectItem>
+                    <SelectItem value="reequilibrio">Reequilíbrio</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

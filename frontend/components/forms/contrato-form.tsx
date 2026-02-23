@@ -44,7 +44,12 @@ const contratoSchema = z
     objeto: z.string().optional(),
     esfera: z.string().optional(),
     indice_reajuste: z.string().optional(),
-    cnpj_orgao: z.string().optional(),
+    cnpj_orgao: z
+      .string()
+      .regex(/^\d{14}$/, 'CNPJ deve ter 14 dígitos (apenas números, sem pontuação)')
+      .optional()
+      .nullable()
+      .or(z.literal('')),
   })
   .refine((data) => data.data_vigencia_inicio <= data.data_vigencia_fim, {
     message: 'Início deve ser anterior ao fim da vigência',
@@ -242,7 +247,7 @@ export function ContratoForm({ mode = 'create', contratoId, initialData }: Contr
               <FormItem>
                 <FormLabel>Número do Contrato *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: 001/2026" {...field} />
+                  <Input placeholder="Ex: 001/2026" maxLength={100} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -257,7 +262,7 @@ export function ContratoForm({ mode = 'create', contratoId, initialData }: Contr
               <FormItem className="sm:col-span-2">
                 <FormLabel>Órgão Público *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: Prefeitura Municipal de São Paulo" {...field} />
+                  <Input placeholder="Ex: Prefeitura Municipal de São Paulo" maxLength={255} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -371,7 +376,7 @@ export function ContratoForm({ mode = 'create', contratoId, initialData }: Contr
               <FormItem>
                 <FormLabel>CNPJ do Órgão</FormLabel>
                 <FormControl>
-                  <Input placeholder="XX.XXX.XXX/XXXX-XX" {...field} />
+                  <Input placeholder="00000000000000" maxLength={14} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
