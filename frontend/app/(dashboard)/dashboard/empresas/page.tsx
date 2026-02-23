@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
+import { Plus, Upload, Building2 } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -17,7 +18,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ProtectedRoute } from '@/components/common/protected-route'
 import { CnpjForm } from '@/components/forms/cnpj-form'
 import { cnpjsService } from '@/lib/services/cnpjs.service'
+import { uploadService } from '@/lib/services/upload.service'
 import { PERFIS } from '@/lib/constants/perfis'
+import { BUCKETS } from '@/lib/constants/buckets'
+import { useEmpresa } from '@/contexts/empresa-context'
+import { createClient } from '@/lib/supabase/client'
 import { type Cnpj } from '@/types/models'
 import toast from 'react-hot-toast'
 
@@ -26,11 +31,44 @@ function formatCnpj(cnpj: string): string {
 }
 
 export default function EmpresasPage() {
+  const { empresa, refreshEmpresa } = useEmpresa()
   const [cnpjs, setCnpjs] = useState<Cnpj[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingCnpj, setEditingCnpj] = useState<Cnpj | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !empresa) return
+
+    const validation = uploadService.validateFile(file, BUCKETS.LOGOS)
+    if (!validation.valid) {
+      toast.error(validation.error ?? 'Arquivo inválido')
+      return
+    }
+
+    setUploadingLogo(true)
+    try {
+      const result = await uploadService.upload(BUCKETS.LOGOS, empresa.id, file)
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('empresas')
+        .update({ logo_url: result.url })
+        .eq('id', empresa.id)
+
+      if (error) throw new Error(error.message)
+      await refreshEmpresa()
+      toast.success('Logotipo atualizado com sucesso!')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar logotipo')
+    } finally {
+      setUploadingLogo(false)
+      if (logoInputRef.current) logoInputRef.current.value = ''
+    }
+  }
 
   async function loadCnpjs() {
     try {
@@ -99,6 +137,62 @@ export default function EmpresasPage() {
             </Button>
           )}
         </div>
+
+        {/* Card logotipo da empresa */}
+        <Card className="border-slate-200">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="text-base font-semibold text-slate-800">
+              Logotipo da Empresa
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-5">
+            <div className="flex items-center gap-6">
+              {/* Preview */}
+              <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden">
+                {empresa?.logo_url ? (
+                  <Image
+                    src={empresa.logo_url}
+                    alt="Logotipo da empresa"
+                    width={80}
+                    height={80}
+                    className="h-20 w-20 object-contain p-1"
+                    unoptimized
+                  />
+                ) : (
+                  <Building2 className="h-8 w-8 text-slate-300" />
+                )}
+              </div>
+
+              {/* Ação */}
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium text-slate-700">
+                  {empresa?.logo_url ? 'Alterar logotipo' : 'Adicionar logotipo'}
+                </p>
+                <p className="text-xs text-slate-400">
+                  PNG, JPG, SVG ou WebP · Máx. 2 MB · Exibido no topo do menu lateral
+                </p>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept=".png,.jpg,.jpeg,.svg,.webp"
+                  className="hidden"
+                  onChange={handleLogoUpload}
+                  disabled={uploadingLogo}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={uploadingLogo}
+                  onClick={() => logoInputRef.current?.click()}
+                  className="mt-1"
+                >
+                  <Upload className="mr-1.5 h-3.5 w-3.5" />
+                  {uploadingLogo ? 'Enviando...' : 'Escolher arquivo'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Formulário inline */}
         {showForm && (

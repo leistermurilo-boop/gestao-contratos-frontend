@@ -14,6 +14,7 @@ export interface Database {
           id: string
           razao_social: string
           nome_fantasia: string | null
+          logo_url: string | null
           created_at: string
           updated_at: string
           config_json: Json | null
@@ -22,6 +23,7 @@ export interface Database {
           id?: string
           razao_social: string
           nome_fantasia?: string | null
+          logo_url?: string | null
           created_at?: string
           updated_at?: string
           config_json?: Json | null
@@ -30,6 +32,7 @@ export interface Database {
           id?: string
           razao_social?: string
           nome_fantasia?: string | null
+          logo_url?: string | null
           created_at?: string
           updated_at?: string
           config_json?: Json | null

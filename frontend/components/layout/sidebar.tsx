@@ -50,8 +50,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         {/* Logo e empresa */}
         <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center">
-            <Image src="/logo.svg" alt="DUO Governance" width={32} height={32} priority />
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded">
+            {empresa?.logo_url ? (
+              <Image
+                src={empresa.logo_url}
+                alt={empresa.nome_fantasia ?? empresa.razao_social}
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+                unoptimized
+              />
+            ) : (
+              <Image src="/logo.svg" alt="DUO Governance" width={32} height={32} priority />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold leading-tight">DUO Governance</p>
