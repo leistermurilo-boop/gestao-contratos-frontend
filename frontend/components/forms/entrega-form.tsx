@@ -35,8 +35,9 @@ const entregaSchema = z.object({
 
 type EntregaFormData = z.infer<typeof entregaSchema>
 
-function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0]
+function getTodayLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 interface EntregaFormProps {
@@ -52,8 +53,8 @@ export function EntregaForm({ afId, af }: EntregaFormProps) {
   const form = useForm<EntregaFormData>({
     resolver: zodResolver(entregaSchema),
     defaultValues: {
-      quantidade_entregue: 0,
-      data_entrega: getTodayISO(),
+      quantidade_entregue: '' as unknown as number,
+      data_entrega: getTodayLocal(),
       nf_saida_numero: '',
       observacao: '',
     },

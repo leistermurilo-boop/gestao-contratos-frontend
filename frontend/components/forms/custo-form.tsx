@@ -34,8 +34,9 @@ const custoSchema = z.object({
 
 type CustoFormData = z.infer<typeof custoSchema>
 
-function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0]
+function getTodayLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 interface CustoFormProps {
@@ -51,9 +52,9 @@ export function CustoForm({ contratoId, itemId }: CustoFormProps) {
   const form = useForm<CustoFormData>({
     resolver: zodResolver(custoSchema),
     defaultValues: {
-      data_lancamento: getTodayISO(),
-      custo_unitario: 0,
-      quantidade: 0,
+      data_lancamento: getTodayLocal(),
+      custo_unitario: '' as unknown as number,
+      quantidade: '' as unknown as number,
       fornecedor: '',
       numero_nf: '',
       observacao: '',
