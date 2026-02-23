@@ -63,13 +63,16 @@ export function EmpresaProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    if (usuario) {
+    if (usuario?.id) {
       loadEmpresa()
     } else {
       setEmpresa(null)
       setLoading(false)
     }
-  }, [usuario])
+    // Usar usuario.id como dependência evita re-execuções por mudança de referência
+    // do objeto usuario a cada processSession(), mantendo o comportamento correto
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuario?.id])
 
   const refreshEmpresa = async () => {
     await loadEmpresa()

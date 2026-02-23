@@ -27,9 +27,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  // Bloquear render se não autenticado (usuario.ativo verificado no AuthContext)
+  // Enquanto router.push('/login') navega, manter spinner em vez de null
+  // para evitar janela de tela branca entre signOut e a navegação completar
   if (!user) {
-    return null
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-navy"></div>
+      </div>
+    )
   }
 
   return (
