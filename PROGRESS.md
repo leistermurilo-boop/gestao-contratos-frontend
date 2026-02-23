@@ -1,7 +1,44 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-02-20 (última atualização)
-**Sessão:** Fase 12 — Deploy Vercel (Stories 12.1–12.4)
+**Data:** 2026-02-23 (última atualização)
+**Sessão:** Fase 13 — Hotfixes Pós-Deploy + Logotipo da Empresa
+
+---
+
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 23/02/2026)
+
+### 🔧 Hotfixes Pós-Deploy Aplicados:
+
+**Estabilidade de sessão / autenticação:**
+- `@supabase/ssr` atualizado `0.1.0` → `0.5.2` (bug INITIAL_SESSION não disparava ao expirar token)
+- `@supabase/supabase-js` atualizado `2.39.8` → `2.97.0`
+- `auth-context.tsx`: substituído timeout cego por fallback `getSession()` em 1s; flag de concorrência
+- Error boundaries: `global-error.tsx`, `app/error.tsx`, `(dashboard)/error.tsx`
+- `next.config.mjs`: Cache-Control `private, no-store` em todas as rotas `/dashboard/*`
+
+**Bugs de navegação corrigidos:**
+- 3 arquivos com prefixo `/contratos/...` trocado para `/dashboard/contratos/...` (custo-form, itens-table, custos-table)
+
+**Visual / favicon:**
+- Sidebar: logo DUO Governance exibido via `<Image>` (antes era texto "DG")
+- Favicon: `app/icon.svg` criado (file convention Next.js App Router) — elimina ícone Vercel
+- `layout.tsx`: metadata icons com `type: 'image/svg+xml'`
+
+**Formulários corrigidos:**
+- `getTodayISO()` → `getTodayLocal()` em `custo-form.tsx` e `entrega-form.tsx` (UTC→local, evita mostrar amanhã após 21h BRT)
+- Default de campos numéricos: `0` → `''` (mostra placeholder ao invés de zero)
+
+**Migrations aplicadas:**
+- **Migration 012** — SECURITY DEFINER nas 6 trigger functions (`processar_novo_custo`, `atualizar_margem_item`, `processar_entrega`, `validar_saldo_af`, `validar_entrega`, `validar_nf_unica`) para bypassar RLS em operações internas
+- **Migration 013** — `ALTER TABLE empresas ADD COLUMN logo_url TEXT`
+- **Migration 014** — RLS policies INSERT/UPDATE/DELETE/SELECT no bucket `logos`
+
+**Feature: Logotipo da empresa:**
+- `buckets.ts`: bucket `LOGOS` adicionado (PNG/JPG/SVG/WebP, 2MB)
+- `next.config.mjs`: `remotePatterns` para Supabase Storage
+- `empresa-context.tsx` + `database.types.ts`: campo `logo_url` exposto no contexto
+- `sidebar.tsx`: exibe `empresa.logo_url` no topo quando disponível (fallback: DUO logo)
+- `empresas/page.tsx`: card de upload de logotipo com preview inline (admin only)
 
 ---
 
@@ -23,6 +60,41 @@
 URL: https://gestao-contratos-frontend.vercel.app
 Status: Online e navegável
 Testado: login via janela anônima, navegação em todas as abas
+```
+
+---
+
+## 📁 ARQUIVOS MODIFICADOS/CRIADOS (sessão 23/02/2026)
+
+```
+database/migrations/
+├── MIGRATION 012.sql   ✅ SECURITY DEFINER nas 6 trigger functions
+├── MIGRATION 013.sql   ✅ ADD COLUMN logo_url em empresas
+└── MIGRATION 014.sql   ✅ RLS policies bucket logos
+
+frontend/
+├── package.json                           🔄 @supabase/ssr 0.5.2 + supabase-js 2.97.0
+├── next.config.mjs                        🔄 Cache-Control + remotePatterns Supabase Storage
+├── app/
+│   ├── icon.svg                           ✅ Favicon (file convention App Router)
+│   ├── layout.tsx                         🔄 metadata icons com type svg
+│   ├── error.tsx                          ✅ Error boundary root
+│   ├── global-error.tsx                   ✅ Error boundary global
+│   └── (dashboard)/error.tsx             ✅ Error boundary dashboard
+├── contexts/
+│   ├── auth-context.tsx                   🔄 INITIAL_SESSION fallback + concorrência
+│   └── empresa-context.tsx               🔄 + logo_url no Empresa interface
+├── types/database.types.ts                🔄 + logo_url em empresas Row/Insert/Update
+├── lib/constants/buckets.ts               🔄 + LOGOS bucket
+├── components/
+│   ├── layout/sidebar.tsx                 🔄 logo empresa (logo_url) + DUO fallback
+│   ├── forms/custo-form.tsx               🔄 getTodayLocal() + default '' nos numéricos
+│   ├── forms/entrega-form.tsx             🔄 getTodayLocal() + default '' na quantidade
+│   └── tables/
+│       ├── itens-table.tsx               🔄 fix /dashboard/contratos/ prefix
+│       └── custos-table.tsx              🔄 fix /dashboard/contratos/ prefix
+└── app/(dashboard)/dashboard/
+    └── empresas/page.tsx                  🔄 card upload logotipo
 ```
 
 ---
@@ -64,7 +136,16 @@ docs/
 
 ---
 
-## 📋 COMMITS REALIZADOS (ESTA SESSÃO)
+## 📋 COMMITS REALIZADOS (sessão 23/02/2026)
+
+| Hash | Commit |
+|------|--------|
+| `b634106` | docs: Migration 014 - RLS policies para bucket logos |
+| `756ece9` | feat: upload e exibição de logotipo da empresa no sidebar [Migration 013] |
+| `9617497` | fix: corrigir timezone bug e UX de inputs numéricos nos formulários de custo/entrega |
+| `90548ab` | fix: estabilidade de sessão, favicon, logo sidebar e 404 custos via contratos |
+
+## 📋 COMMITS REALIZADOS (sessão 20/02/2026)
 
 | Hash | Commit |
 |------|--------|
@@ -150,20 +231,20 @@ docs/
 
 ---
 
-## 🎯 PRÓXIMA FASE — Polish Visual + Ajustes Pós-Testes
+## 🎯 PRÓXIMA FASE — Testes de Perfil + Ajustes
 
-### Pendente (a definir após testes em produção):
+### Pendente:
 
-1. **Logo no sidebar** — imagem não renderiza no canto superior esquerdo
-2. **Logo da empresa** — upload de logotipo pelo cliente, exibindo próximo ao nome do usuário
-3. **Ajustes de triggers/alertas** — validar após cadastros reais em produção
-4. **Testes da matriz de permissões** — executar checklist `docs/tests/matriz-permissoes.md` com 5 perfis
+1. **Testes da matriz de permissões** — executar checklist `docs/tests/matriz-permissoes.md` com 5 perfis
+2. **Validar registro de custos** — testar após Migration 012 (SECURITY DEFINER triggers)
+3. **Validar logo da empresa** — testar upload em `/dashboard/empresas` e exibição no sidebar
+4. **Ajustes pós-testes** — implementar correções encontradas
 
 ### Workflow para retorno:
-1. Usuário faz cadastros em produção (contratos, itens, AF, custos, entregas)
-2. Testa os 5 perfis conforme a matriz (story 12.2)
-3. Anota bugs/ajustes encontrados
-4. Nova sessão: implementar lista de ajustes + polish visual
+1. Fazer cadastros reais em produção (contratos, itens, AF, custos, entregas)
+2. Testar os 5 perfis conforme a matriz (`docs/tests/matriz-permissoes.md`)
+3. Anotar bugs/ajustes encontrados
+4. Nova sessão: implementar lista de ajustes
 
 ---
 
@@ -172,12 +253,18 @@ docs/
 ### ✅ Confirmado em produção:
 - Login funcional via `https://gestao-contratos-frontend.vercel.app/login`
 - Navegação em todas as abas (janela anônima)
-- Build 0 erros (29 rotas compiladas)
+- Build 0 erros, TypeScript limpo
+- Favicon DUO Governance exibido (sem ícone Vercel)
+- Logo DUO Governance no sidebar (sem texto "DG")
+- Sessão estável sem necessidade de limpar cookies
+- Formulário de custo: data local correta + campos numéricos com placeholder
 
 ### ⏳ Aguardando testes manuais (usuário):
-- CRUD de contratos com dados reais
+- Registro de custo salva corretamente (após Migration 012)
+- Upload de logotipo da empresa (`/dashboard/empresas`)
+- Logo da empresa exibido no sidebar após upload
+- CRUD completo com dados reais
 - Triggers de saldo (AF e entrega)
-- Upload de arquivos (Supabase Storage)
 - Testes de perfil (5 usuários × matriz de permissões)
 - API Route `/api/usuarios/invite` em produção
 
@@ -236,8 +323,10 @@ Ao retornar para continuar o projeto:
 - [ ] Ler este arquivo (PROGRESS.md)
 - [ ] Verificar último commit: `git log --oneline | head -5`
 - [ ] Acessar produção: `https://gestao-contratos-frontend.vercel.app`
-- [ ] Levantar lista de ajustes pós-testes
-- [ ] Implementar polish visual (logo sidebar + logo empresa)
+- [ ] Testar registro de custo (valida Migration 012)
+- [ ] Testar upload de logo em `/dashboard/empresas` (valida Migrations 013+014 + bucket logos)
+- [ ] Executar matriz de permissões (`docs/tests/matriz-permissoes.md`)
+- [ ] Listar ajustes encontrados → nova sessão de implementação
 
 ---
 
@@ -263,7 +352,7 @@ git log --oneline | head -10
 
 ---
 
-**Última atualização:** 2026-02-20
-**Status:** 🚀 43/43 STORIES IMPLEMENTADAS — EM PRODUÇÃO
+**Última atualização:** 2026-02-23
+**Status:** 🚀 43/43 STORIES + 4 MIGRATIONS PÓS-DEPLOY — EM PRODUÇÃO
 **URL produção:** https://gestao-contratos-frontend.vercel.app
-**Próxima ação:** Testes em produção → Polish visual pós-feedback
+**Próxima ação:** Testes com dados reais → Matriz de permissões → Ajustes pós-feedback
