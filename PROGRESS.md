@@ -1,7 +1,107 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-02-23 (última atualização — fim do dia)
-**Sessão:** Fase 13 — Hotfixes Pós-Deploy + Logotipo + Diagnóstico Definitivo de Sessão + Blueprint IA
+**Data:** 2026-02-25 (última atualização — fim do dia)
+**Sessão:** Fase 14 — Estabilidade de Auth + Blueprint Suporte + Testes em Produção
+
+---
+
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 25/02/2026 — COMPLETO)
+
+### 🔐 Correção Definitiva de Autenticação (7 bugs + 1 bug de logout pós-testes):
+
+**Análise técnica profunda — bugs identificados e corrigidos:**
+
+**BUG 1 — `client.ts` sem singleton real**
+- `createClient()` criava nova instância a cada montagem do AuthProvider
+- Múltiplos `onAuthStateChange` listeners → race conditions
+- Fix: variável `_client` no nível de módulo (singleton garantido)
+
+**BUG 2 — Fallback usava `getSession()` (lê cache local)**
+- `getSession()` detectava token expirado em storage como sessão válida
+- Causava redirect indevido para `/dashboard` sem autenticação real
+- Fix: substituído por `getUser()` que valida sempre no servidor Supabase
+
+**BUG 3 — `processSession` descartava `TOKEN_REFRESHED`**
+- Se `INITIAL_SESSION` e `TOKEN_REFRESHED` chegassem juntos, o segundo era descartado
+- Usuário ficava com token prestes a expirar → logout inesperado segundos depois
+- Fix: fila `pendingSessionRef` — sessão pendente reprocessada via `setTimeout(0)`
+
+**BUG 4 — `signOut` não invalidava o Router Cache**
+- `router.push('/login')` deixava páginas protegidas no App Router Cache (30s–5min)
+- Fix: `window.location.href` (full reload) em vez de `router.push`
+
+**BUG 5 — Dupla navegação no `signIn`**
+- `signIn()` sempre navegava para `/dashboard`, e a página de login navegava de novo se havia `?redirect=`
+- Duas navegações concorrentes → race condition + flash de tela
+- Fix: `signIn()` não navega mais; navegação centralizada no `onSubmit` do login
+
+**BUG 6 — `server.ts` com API `get/set/remove` (obsoleta)**
+- Incompatível com `@supabase/ssr@0.5.x`; podia perder cookies em Server Components
+- Fix: migrado para `getAll/setAll`
+
+**BUG 7 — Cache-Control ausente nas rotas de auth**
+- `/login`, `/cadastro`, `/recuperar-senha`, `/callback` sem `no-store`
+- Edge CDN podia servir versão cacheada ignorando redirects do middleware
+- Fix: `no-store` adicionado no `next.config.mjs`
+
+**BUG 8 (identificado pós-testes) — Logout não limpava cookies HTTP**
+- `supabase.auth.signOut()` client-side não consegue limpar cookies escritos pelo middleware
+- Access token JWT permanecia válido no cookie (até 1h); fechar e reabrir → `/dashboard`
+- Fix: nova API route `GET /api/auth/signout` (server-side, padrão idêntico ao middleware)
+  - Cria Supabase client server-side com acesso real aos cookies HTTP
+  - Revoga refresh token com `scope: 'global'`
+  - Devolve `Set-Cookie` headers que zeram os tokens no browser + redirect `/login`
+
+### 📁 Blueprint Módulo de Suporte (`docs/support/`):
+
+5 documentos de planejamento criados (sem implementação — apenas preparação):
+- `01_CRISP_INTEGRATION.md` — Chat in-app via Crisp SDK ($25/mês)
+- `02_SUPPORT_AI_AGENT.md` — Agente Claude para resolver 40-50% dos tickets
+- `03_SUPPORT_SECURITY_LGPD.md` — Compliance LGPD (consentimento, sanitização, audit log)
+- `04_SUPPORT_PLAYBOOKS.md` — 7 playbooks operacionais para atendimento humano
+- `05_IMPLEMENTATION_CHECKLIST.md` — Roadmap 4 fases / 4 semanas
+
+### ✅ Testes em Produção (Playwright — 6/6 PASS):
+- Proteção de rota `/dashboard` sem sessão → redireciona para `/login?redirect=` ✅
+- Página de login carrega corretamente ✅
+- Login com credenciais válidas → redireciona para `/dashboard` ✅
+- Dashboard carrega com sidebar, KPIs, gráficos, perfil "Murilo Leister / Admin" ✅
+- Logout → redireciona para `/login` ✅
+- Proteção após logout → `/dashboard` bloqueado ✅
+
+---
+
+## 📁 ARQUIVOS MODIFICADOS/CRIADOS (sessão 25/02/2026)
+
+```
+docs/support/
+├── 01_CRISP_INTEGRATION.md          ✅ Blueprint chat Crisp
+├── 02_SUPPORT_AI_AGENT.md           ✅ Blueprint agente IA de suporte
+├── 03_SUPPORT_SECURITY_LGPD.md      ✅ Compliance LGPD + audit log
+├── 04_SUPPORT_PLAYBOOKS.md          ✅ 7 playbooks operacionais
+└── 05_IMPLEMENTATION_CHECKLIST.md   ✅ Checklist 4 fases
+
+frontend/
+├── lib/supabase/
+│   ├── client.ts                    🔄 Singleton de módulo (_client)
+│   └── server.ts                    🔄 API getAll/setAll (compat. 0.5.x)
+├── contexts/auth-context.tsx        🔄 fallback getUser + fila pendente +
+│                                        signOut → /api/auth/signout
+├── app/
+│   ├── (auth)/login/page.tsx        🔄 Navegação pós-login centralizada
+│   └── api/auth/signout/route.ts    ✅ API route server-side de logout
+└── next.config.mjs                  🔄 no-store nas rotas de auth
+```
+
+---
+
+## 📋 COMMITS REALIZADOS (sessão 25/02/2026)
+
+| Hash | Commit |
+|------|--------|
+| `e202368` | docs: blueprint módulo de suporte — Crisp + IA + LGPD + Playbooks |
+| `385a94a` | fix: corrigir instabilidade persistente no fluxo de autenticação |
+| `dd86fab` | fix: corrigir logout — signOut server-side via API route |
 
 ---
 
@@ -260,20 +360,28 @@ docs/
 
 ---
 
-## 🎯 PRÓXIMA FASE — Testes de Perfil + Ajustes
+## 🎯 PRÓXIMA FASE — Suporte ao Cliente + Testes de Perfil
 
-### Pendente:
+### Pendente (por prioridade):
 
-1. **Testes da matriz de permissões** — executar checklist `docs/tests/matriz-permissoes.md` com 5 perfis
-2. **Validar registro de custos** — testar após Migration 012 (SECURITY DEFINER triggers)
-3. **Validar logo da empresa** — testar upload em `/dashboard/empresas` e exibição no sidebar
-4. **Ajustes pós-testes** — implementar correções encontradas
+1. **Implementar módulo de suporte** — blueprints prontos em `docs/support/`
+   - Fase 1: Crisp Integration (1-2 dias)
+   - Fase 2: LGPD + Agente IA (3-4 dias)
+   - Fase 3: Polish + Monitoring
+   - Ref: `docs/support/05_IMPLEMENTATION_CHECKLIST.md`
+
+2. **Testes da matriz de permissões** — executar checklist `docs/tests/matriz-permissoes.md` com 5 perfis
+
+3. **Validar registro de custos** — testar após Migration 012 (SECURITY DEFINER triggers)
+
+4. **Validar logo da empresa** — testar upload em `/dashboard/empresas` e exibição no sidebar
 
 ### Workflow para retorno:
-1. Fazer cadastros reais em produção (contratos, itens, AF, custos, entregas)
-2. Testar os 5 perfis conforme a matriz (`docs/tests/matriz-permissoes.md`)
-3. Anotar bugs/ajustes encontrados
-4. Nova sessão: implementar lista de ajustes
+1. Testar logout: fechar aba → reabrir → deve pedir login (Bug 8 corrigido em 25/02)
+2. Fazer cadastros reais em produção (contratos, itens, AF, custos, entregas)
+3. Testar os 5 perfis conforme a matriz (`docs/tests/matriz-permissoes.md`)
+4. Anotar bugs/ajustes encontrados
+5. Decidir: polish do sistema atual ou começar módulo de suporte (Crisp)
 
 ---
 
@@ -352,10 +460,11 @@ Ao retornar para continuar o projeto:
 - [ ] Ler este arquivo (PROGRESS.md)
 - [ ] Verificar último commit: `git log --oneline | head -5`
 - [ ] Acessar produção: `https://gestao-contratos-frontend.vercel.app`
+- [ ] Testar logout: fazer login → logout → fechar aba → reabrir → deve pedir login novamente
 - [ ] Testar registro de custo (valida Migration 012)
 - [ ] Testar upload de logo em `/dashboard/empresas` (valida Migrations 013+014 + bucket logos)
 - [ ] Executar matriz de permissões (`docs/tests/matriz-permissoes.md`)
-- [ ] Listar ajustes encontrados → nova sessão de implementação
+- [ ] Decidir próxima prioridade: suporte (Crisp) ou polish do sistema atual
 
 ---
 
@@ -381,7 +490,7 @@ git log --oneline | head -10
 
 ---
 
-**Última atualização:** 2026-02-23
-**Status:** 🚀 43/43 STORIES + 4 MIGRATIONS PÓS-DEPLOY — EM PRODUÇÃO
+**Última atualização:** 2026-02-25
+**Status:** 🚀 43/43 STORIES + AUTH ESTÁVEL — EM PRODUÇÃO
 **URL produção:** https://gestao-contratos-frontend.vercel.app
-**Próxima ação:** Testes com dados reais → Matriz de permissões → Ajustes pós-feedback
+**Próxima ação:** Implementar módulo de suporte (Crisp) → Testes de perfil → Polish
