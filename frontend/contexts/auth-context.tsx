@@ -171,16 +171,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    // Limpar estado local antes do signOut
+    // Limpar estado local imediatamente (UX responsivo)
     setUser(null)
     setUsuario(null)
-    await supabase.auth.signOut()
-    // window.location.href (full reload) em vez de router.push:
-    // → invalida o Router Cache client-side do App Router
-    // → garante que o middleware execute na próxima request
-    // → limpa qualquer estado JS residual
-    // router.push('/login') deixaria páginas protegidas no cache por 30s-5min
-    window.location.href = '/login'
+    // Redirecionar para a API route server-side de signout.
+    // NÃO chamar supabase.auth.signOut() client-side porque:
+    //   1. O client não consegue limpar cookies escritos pelo middleware server-side
+    //      (atributos path/secure/sameSite podem não coincidir)
+    //   2. O access token JWT permanece válido até expirar mesmo após signOut() local
+    // A route /api/auth/signout:
+    //   → cria client server-side com acesso real aos cookies HTTP
+    //   → revoga o refresh token no Supabase Auth (scope: global)
+    //   → escreve Set-Cookie headers que zeram os tokens no browser
+    //   → redireciona para /login com cookies limpos
+    window.location.href = '/api/auth/signout'
   }
 
   const refreshUser = async () => {
