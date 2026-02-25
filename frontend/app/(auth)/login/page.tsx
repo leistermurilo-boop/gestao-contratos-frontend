@@ -53,19 +53,19 @@ function LoginForm() {
       setError(null)
       await signIn(data.email, data.password)
 
-      // Redirecionar para rota original ou dashboard (com validação anti-open-redirect)
+      // signIn autentica mas NÃO navega — navegação centralizada aqui para evitar
+      // dupla navegação quando há ?redirect= na URL (signIn→/dashboard + onSubmit→/redirect)
       const redirect = searchParams.get('redirect')
-      if (redirect) {
-        // Validar que é path interno seguro
-        const isSafePath = redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('://')
-        if (isSafePath) {
-          router.push(redirect)
-        } else {
-          console.warn('Redirect param inválido (possível open redirect):', redirect)
-          router.push('/dashboard')
-        }
+      const isSafePath = redirect
+        && redirect.startsWith('/')
+        && !redirect.startsWith('//')
+        && !redirect.includes('://')
+
+      if (isSafePath) {
+        router.push(redirect)
+      } else {
+        router.push('/dashboard')
       }
-      // Se não há redirect, signIn já redireciona para /dashboard
     } catch (err: unknown) {
       console.error('Erro no login:', err)
       const raw: string = err instanceof Error ? err.message : ''

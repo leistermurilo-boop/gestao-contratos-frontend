@@ -31,19 +31,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  // createClient() retorna singleton de módulo — seguro chamar sem useMemo
   const supabase = useMemo(() => createClient(), [])
 
-  // Proteção de concorrência: impede execuções sobrepostas de processSession
+  // Proteção de concorrência com suporte a sessão pendente.
+  // Se TOKEN_REFRESHED chega enquanto INITIAL_SESSION ainda processa, a sessão
+  // mais recente é armazenada e reprocessada ao final — nunca descartada.
   const processingRef = useRef(false)
+  const pendingSessionRef = useRef<Session | null | undefined>(undefined)
 
-  /**
-   * Processa uma sessão recebida do onAuthStateChange.
-   * Recebe a session diretamente para evitar uma segunda chamada getSession().
-   * Usa flag de concorrência para garantir que apenas uma execução rode por vez.
-   */
   const processSession = async (session: Session | null) => {
-    // Se já há uma execução em andamento, ignora a nova — evita race condition
-    if (processingRef.current) return
+    // Se já processando, armazena a sessão mais recente para processar depois
+    if (processingRef.current) {
+      pendingSessionRef.current = session
+      return
+    }
     processingRef.current = true
 
     try {
@@ -68,10 +70,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Usuário autenticado mas sem registro na tabela usuarios:', session.user.id)
           setUser(null)
           setUsuario(null)
-          // signOut sem await para não bloquear — falha silenciosa aceitável aqui
           supabase.auth.signOut().catch(() => null)
         }
-        // Erro de rede ou outro erro temporário: não deslogar, loading termina normalmente
         return
       }
 
@@ -79,7 +79,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('Usuário inativo:', usuarioData?.email)
         setUser(null)
         setUsuario(null)
-        // signOut sem await — se falhar, o estado já está limpo
         supabase.auth.signOut().catch(() => null)
         router.push('/login?error=inactive')
         return
@@ -87,19 +86,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUsuario(usuarioData)
     } catch (err) {
-      // Erro inesperado: logar mas não deslogar (pode ser problema de rede temporário)
       console.error('Erro inesperado em processSession:', err)
     } finally {
       processingRef.current = false
       setLoading(false)
+
+      // Se uma sessão mais recente chegou durante o processamento (ex: TOKEN_REFRESHED
+      // enquanto INITIAL_SESSION estava em andamento), processar agora.
+      if (pendingSessionRef.current !== undefined) {
+        const pending = pendingSessionRef.current
+        pendingSessionRef.current = undefined
+        // setTimeout(0) garante que o stack atual termina antes de iniciar nova execução
+        setTimeout(() => processSession(pending), 0)
+      }
     }
   }
 
   useEffect(() => {
     let initialSessionHandled = false
 
-    // onAuthStateChange como fonte principal de verdade.
-    // INITIAL_SESSION dispara imediatamente ao subscrevere com a sessão atual.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'INITIAL_SESSION') {
@@ -115,12 +120,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
-    // Fallback: se INITIAL_SESSION não disparar em 1s (edge case de rede/SDK),
-    // busca a sessão diretamente via getSession() para não ficar em loading infinito.
+    // Fallback: se INITIAL_SESSION não disparar em 1s, validar sessão com o servidor.
+    // IMPORTANTE: usar getUser() (valida com servidor), NÃO getSession() (lê cache local).
+    // getSession() pode retornar sessão com token expirado que ainda está no storage,
+    // causando redirecionamento indevido para /dashboard sem autenticação real.
     const fallback = setTimeout(async () => {
       if (!initialSessionHandled) {
-        const { data: { session } } = await supabase.auth.getSession()
-        await processSession(session)
+        const { data: { user: serverUser }, error } = await supabase.auth.getUser()
+        if (!error && serverUser) {
+          // Token válido no servidor — buscar sessão local para o processSession
+          const { data: { session } } = await supabase.auth.getSession()
+          await processSession(session)
+        } else {
+          // Sem sessão válida no servidor
+          setUser(null)
+          setUsuario(null)
+          setLoading(false)
+        }
       }
     }, 1000)
 
@@ -136,8 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) throw error
 
-    // Verificar ativo antes de navegar (onAuthStateChange vai processar em paralelo,
-    // mas queremos bloquear a navegação se o usuário estiver inativo)
+    // Verificar ativo antes de retornar — bloqueia navegação para usuários inativos
     if (data.user) {
       const { data: usuarioData } = await supabase
         .from('usuarios')
@@ -151,15 +166,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    router.push('/dashboard')
+    // Navegação é responsabilidade de quem chama signIn (login/page.tsx).
+    // Isso evita dupla navegação quando há ?redirect= na URL.
   }
 
   const signOut = async () => {
-    // Limpar estado local antes do signOut para evitar janela de estado inconsistente
+    // Limpar estado local antes do signOut
     setUser(null)
     setUsuario(null)
     await supabase.auth.signOut()
-    router.push('/login')
+    // window.location.href (full reload) em vez de router.push:
+    // → invalida o Router Cache client-side do App Router
+    // → garante que o middleware execute na próxima request
+    // → limpa qualquer estado JS residual
+    // router.push('/login') deixaria páginas protegidas no cache por 30s-5min
+    window.location.href = '/login'
   }
 
   const refreshUser = async () => {
