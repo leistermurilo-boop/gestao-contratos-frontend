@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   FileText,
@@ -10,9 +11,19 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { DashboardCards } from '@/components/charts/dashboard-cards'
-import { MargemChart } from '@/components/charts/margem-chart'
-import { VencimentosChart } from '@/components/charts/vencimentos-chart'
 import { DashboardAlertas } from '@/components/charts/dashboard-alertas'
+
+// ssr: false — recharts usa useLayoutEffect e browser APIs (ResizeObserver).
+// Sem isso, o SSR do Node.js falha silenciosamente → RSC payload malformado
+// → hydration bail-out → spinner infinito em produção.
+const MargemChart = dynamic(
+  () => import('@/components/charts/margem-chart').then((m) => ({ default: m.MargemChart })),
+  { ssr: false }
+)
+const VencimentosChart = dynamic(
+  () => import('@/components/charts/vencimentos-chart').then((m) => ({ default: m.VencimentosChart })),
+  { ssr: false }
+)
 
 interface ModuleCard {
   title: string

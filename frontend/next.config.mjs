@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // recharts usa ESM puro — sem transpilePackages, Next.js 14 falha ao pré-renderizar
+  // Client Components que importam recharts no servidor (Node.js), causando RSC payload
+  // malformado e falha silenciosa de hydration no cliente.
+  transpilePackages: ['recharts'],
   images: {
     remotePatterns: [
       {
