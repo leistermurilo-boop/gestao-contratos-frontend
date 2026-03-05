@@ -20,11 +20,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     if (!loading && !user) {
-      // Debounce de 400ms: dá tempo ao TOKEN_REFRESHED de restaurar a sessão
-      // antes de redirecionar — evita logout falso durante renovação de token.
+      // TIMING CRÍTICO: processSession do AuthProvider pode levar até 1.5s
+      // (fetch Supabase + validação usuário ativo). Timer de redirect deve
+      // aguardar auth estabilizar antes de redirecionar usuário não autenticado.
+      // 2000ms garante margem segura mesmo em conexões lentas e cobre o caso
+      // de race condition pós-login (signIn() retorna antes de processSession
+      // completar, causando janela breve de user=null no DashboardLayout).
       redirectTimerRef.current = setTimeout(() => {
         router.push('/login')
-      }, 400)
+      }, 2000)
     }
 
     return () => {
