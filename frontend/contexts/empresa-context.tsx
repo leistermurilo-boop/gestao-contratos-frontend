@@ -82,6 +82,10 @@ export function EmpresaProvider({ children }: { children: React.ReactNode }) {
   // Helper computed: margem_alerta com fallback
   const margemAlerta = empresa?.config_json?.margem_alerta ?? 10.0
 
+  if (loading) {
+    return null
+  }
+
   return (
     <EmpresaContext.Provider
       value={{
