@@ -4,6 +4,7 @@ import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -47,6 +48,9 @@ export function ConfigMargemModal({ open, onOpenChange }: ConfigMargemModalProps
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Configurar Margem de Alerta</DialogTitle>
+          <DialogDescription>
+            Defina o percentual mínimo de margem. Contratos abaixo deste valor receberão badge de alerta.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
