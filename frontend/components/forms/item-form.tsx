@@ -21,7 +21,7 @@ import toast from 'react-hot-toast'
 
 const itemSchema = z.object({
   numero_item: z.coerce.number().int().positive('Deve ser um número positivo').optional().or(z.literal('')),
-  descricao: z.string().min(1, 'Descrição é obrigatória'),
+  descricao: z.string().min(1, 'Marca/Modelo é obrigatório'),
   unidade: z.string().min(1, 'Unidade é obrigatória'),
   quantidade: z.coerce.number().positive('Quantidade deve ser maior que zero'),
   valor_unitario: z.coerce.number().positive('Valor deve ser maior que zero'),
@@ -137,15 +137,15 @@ export function ItemForm({ mode = 'create', contratoId, cnpjId, itemId, initialD
             )}
           />
 
-          {/* Descrição */}
+          {/* Marca/Modelo */}
           <FormField
             control={form.control}
             name="descricao"
             render={({ field }) => (
               <FormItem className="sm:col-span-2">
-                <FormLabel>Descrição *</FormLabel>
+                <FormLabel>Marca/Modelo *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Descrição completa do item" {...field} />
+                  <Input placeholder="Ex: Samsung Galaxy S24, Parafuso M8 Inox..." {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

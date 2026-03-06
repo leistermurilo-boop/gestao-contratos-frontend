@@ -269,7 +269,7 @@ export default function ContratoDetailPage() {
               <TableHeader>
                 <TableRow className="bg-slate-50 hover:bg-slate-50">
                   <TableHead className="font-semibold text-slate-700">#</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Descrição</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Marca/Modelo</TableHead>
                   <TableHead className="font-semibold text-slate-700">Un.</TableHead>
                   <TableHead className="text-right font-semibold text-slate-700">Qtd</TableHead>
                   <TableHead className="text-right font-semibold text-slate-700">Saldo</TableHead>
