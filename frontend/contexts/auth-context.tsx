@@ -109,6 +109,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (event === 'INITIAL_SESSION') {
           initialSessionHandled = true
+          if (!session) {
+            // Se session é null no INITIAL_SESSION, pode ser race condition de rotação
+            // concorrente de tokens (outro request rotacionou antes e invalidou este).
+            // Verificar com o servidor se ainda há sessão válida antes de deslogar.
+            const { data: { user: serverUser } } = await supabase.auth.getUser()
+            if (serverUser) {
+              const { data: { session: freshSession } } = await supabase.auth.getSession()
+              await processSession(freshSession)
+              return
+            }
+          }
           await processSession(session)
         } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           await processSession(session)

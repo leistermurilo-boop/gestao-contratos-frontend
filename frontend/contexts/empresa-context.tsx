@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from './auth-context'
 
@@ -78,22 +78,22 @@ export function EmpresaProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario?.id])
 
-  const refreshEmpresa = async () => {
+  const refreshEmpresa = useCallback(async () => {
     await loadEmpresa()
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Helper computed: margem_alerta com fallback
   const margemAlerta = empresa?.config_json?.margem_alerta ?? 10.0
 
+  const contextValue = useMemo(
+    () => ({ empresa, loading, margemAlerta, refreshEmpresa }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [empresa, loading, margemAlerta]
+  )
+
   return (
-    <EmpresaContext.Provider
-      value={{
-        empresa,
-        loading,
-        margemAlerta,
-        refreshEmpresa,
-      }}
-    >
+    <EmpresaContext.Provider value={contextValue}>
       {children}
     </EmpresaContext.Provider>
   )

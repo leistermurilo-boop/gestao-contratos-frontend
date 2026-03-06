@@ -3,6 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { CookieOptions } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
+  // Requests de prefetch do Next.js NÃO devem rotacionar refresh tokens.
+  // Supabase usa single-use refresh tokens: múltiplos prefetches concorrentes com
+  // token expirado causam race condition — apenas o primeiro rota com sucesso,
+  // os demais invalidam a sessão → dados somem / F5 fica em loading infinito.
+  // O request real de navegação fará a validação e rotação completa.
+  if (request.headers.get('next-router-prefetch') === '1') {
+    return NextResponse.next({ request })
+  }
+
   // IMPORTANTE: usar supabaseResponse como variável única — nunca criar novo
   // NextResponse.next() dentro de setAll(), pois isso descartaria cookies já escritos.
   let supabaseResponse = NextResponse.next({ request })
