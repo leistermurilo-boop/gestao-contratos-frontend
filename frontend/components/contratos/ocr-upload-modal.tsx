@@ -19,9 +19,14 @@ interface OCRUploadModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: (data: OCRResult) => void
+  /**
+   * Função customizada de fetch. Quando fornecida, substitui o fetch padrão
+   * para /api/ocr/extract-contract. Útil para usar /api/ocr/extract-all.
+   */
+  fetchFn?: (file: File) => Promise<OCRResult>
 }
 
-export function OCRUploadModal({ open, onOpenChange, onSuccess }: OCRUploadModalProps) {
+export function OCRUploadModal({ open, onOpenChange, onSuccess, fetchFn }: OCRUploadModalProps) {
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
 
@@ -34,27 +39,29 @@ export function OCRUploadModal({ open, onOpenChange, onSuccess }: OCRUploadModal
       setProgress(10)
 
       try {
-        const formData = new FormData()
-        formData.append('file', file)
-
         const interval = setInterval(() => {
           setProgress((prev) => Math.min(prev + 8, 88))
         }, 1200)
 
-        const response = await fetch('/api/ocr/extract-contract', {
-          method: 'POST',
-          body: formData,
-        })
+        let data: OCRResult
+
+        if (fetchFn) {
+          data = await fetchFn(file)
+        } else {
+          const formData = new FormData()
+          formData.append('file', file)
+          const response = await fetch('/api/ocr/extract-contract', { method: 'POST', body: formData })
+          clearInterval(interval)
+          if (!response.ok) {
+            const err = await response.json()
+            throw new Error(err.error ?? 'Erro ao processar documento')
+          }
+          data = await response.json()
+        }
 
         clearInterval(interval)
         setProgress(100)
 
-        if (!response.ok) {
-          const err = await response.json()
-          throw new Error(err.error ?? 'Erro ao processar documento')
-        }
-
-        const data: OCRResult = await response.json()
         const pct = (data.confidence_geral * 100).toFixed(0)
         toast.success(`Extração concluída! Precisão geral: ${pct}%`)
 
@@ -67,7 +74,7 @@ export function OCRUploadModal({ open, onOpenChange, onSuccess }: OCRUploadModal
         setProgress(0)
       }
     },
-    [onSuccess, onOpenChange],
+    [onSuccess, onOpenChange, fetchFn],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

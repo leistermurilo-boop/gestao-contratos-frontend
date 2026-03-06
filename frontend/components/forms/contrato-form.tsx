@@ -83,9 +83,11 @@ interface ContratoFormProps {
   initialData?: ContratoWithRelations
   /** Dados do OCR para pré-preenchimento — apenas no modo create */
   prefill?: ContratoPrefill
+  /** Callback após salvar com sucesso — quando fornecido, não faz redirect automático */
+  onSaveSuccess?: (contratoId: string, cnpjId: string) => void
 }
 
-export function ContratoForm({ mode = 'create', contratoId, initialData, prefill }: ContratoFormProps) {
+export function ContratoForm({ mode = 'create', contratoId, initialData, prefill, onSaveSuccess }: ContratoFormProps) {
   const router = useRouter()
   const { empresa } = useEmpresa()
   const [cnpjs, setCnpjs] = useState<CnpjOption[]>([])
@@ -208,7 +210,11 @@ export function ContratoForm({ mode = 'create', contratoId, initialData, prefill
           anexo_url: novaAnexoUrl ?? null,
         })
         toast.success('Contrato criado com sucesso!')
-        router.push(`/dashboard/contratos/${novo.id}`)
+        if (onSaveSuccess) {
+          onSaveSuccess(novo.id, novo.cnpj_id)
+        } else {
+          router.push(`/dashboard/contratos/${novo.id}`)
+        }
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao salvar contrato')

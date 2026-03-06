@@ -63,21 +63,26 @@ interface OCRItensModalProps {
   contratoId: string
   cnpjId: string
   onSuccess: (qtd: number) => void
+  /** Quando fornecido, pula a etapa de upload e vai direto para o preview */
+  prefetchedData?: ExtractItemsResult
 }
 
 type Step = 'upload' | 'loading' | 'preview' | 'saving'
 
-export function OCRItensModal({ open, onOpenChange, contratoId, cnpjId, onSuccess }: OCRItensModalProps) {
-  const [step, setStep] = useState<Step>('upload')
+export function OCRItensModal({ open, onOpenChange, contratoId, cnpjId, onSuccess, prefetchedData }: OCRItensModalProps) {
+  const initialStep: Step = prefetchedData ? 'preview' : 'upload'
+  const [step, setStep] = useState<Step>(initialStep)
   const [progress, setProgress] = useState(0)
-  const [result, setResult] = useState<ExtractItemsResult | null>(null)
-  const [itens, setItens] = useState<ItemEditavel[]>([])
+  const [result, setResult] = useState<ExtractItemsResult | null>(prefetchedData ?? null)
+  const [itens, setItens] = useState<ItemEditavel[]>(
+    prefetchedData ? prefetchedData.itens.map((item, idx) => itemOCRToEditavel(item, idx)) : []
+  )
 
   function reset() {
-    setStep('upload')
+    setStep(prefetchedData ? 'preview' : 'upload')
     setProgress(0)
-    setResult(null)
-    setItens([])
+    setResult(prefetchedData ?? null)
+    setItens(prefetchedData ? prefetchedData.itens.map((item, idx) => itemOCRToEditavel(item, idx)) : [])
   }
 
   function handleClose() {

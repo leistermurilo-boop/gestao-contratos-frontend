@@ -9,7 +9,7 @@ Extraia TODOS os itens listados, sem omitir nenhum.
 
 Para cada item extraia:
 - **numero_item**: Número sequencial do item (inteiro) — null se não houver
-- **descricao**: Descrição, marca ou modelo do produto/serviço (texto livre)
+- **descricao**: Conteúdo da coluna "MARCA/MODELO" — NÃO a coluna Descrição/Especificação/Objeto. Se o contrato não tiver coluna específica de Marca/Modelo, use o nome comercial/modelo do produto.
 - **unidade**: Unidade de medida (UN, KG, M², LT, CX, PCT, SV, etc.)
 - **quantidade**: Quantidade contratada (número)
 - **valor_unitario**: Valor unitário em reais (número, sem R$ ou pontuação)
