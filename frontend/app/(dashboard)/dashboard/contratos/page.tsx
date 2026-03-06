@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ContratosTable } from '@/components/tables/contratos-table'
+import { ContratosAlertConfig } from '@/components/contratos/contratos-alert-config'
 
 export default function ContratosPage() {
   return (
@@ -13,12 +14,15 @@ export default function ContratosPage() {
             Gestão completa de contratos ativos e arquivados.
           </p>
         </div>
-        <Button asChild className="flex-shrink-0 bg-brand-navy hover:bg-brand-navy/90">
-          <Link href="/dashboard/contratos/novo">
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Contrato
-          </Link>
-        </Button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <ContratosAlertConfig />
+          <Button asChild className="bg-brand-navy hover:bg-brand-navy/90">
+            <Link href="/dashboard/contratos/novo">
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Contrato
+            </Link>
+          </Button>
+        </div>
       </div>
       <ContratosTable />
     </div>
