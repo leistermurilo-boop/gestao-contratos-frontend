@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -13,6 +13,7 @@ import { itensService } from '@/lib/services/itens.service'
 import { useAuth } from '@/contexts/auth-context'
 import { PERFIS, canViewCosts } from '@/lib/constants/perfis'
 import { type ContratoWithRelations, type ItemContrato } from '@/types/models'
+import { OCRItensModal } from '@/components/contratos/ocr-itens-modal'
 import toast from 'react-hot-toast'
 
 function HeaderSkeleton() {
@@ -33,6 +34,7 @@ export default function ItensContratoPage() {
   const [contrato, setContrato] = useState<ContratoWithRelations | null>(null)
   const [itens, setItens] = useState<ItemContrato[]>([])
   const [loading, setLoading] = useState(true)
+  const [showOCRModal, setShowOCRModal] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -51,6 +53,16 @@ export default function ItensContratoPage() {
     }
     loadData()
   }, [contratoId])
+
+  async function handleOCRSuccess(qtd: number) {
+    // Recarregar itens após inserção em lote
+    try {
+      const itensData = await itensService.getByContrato(contratoId)
+      setItens(itensData)
+    } catch {
+      toast.error('Erro ao recarregar itens')
+    }
+  }
 
   async function handleDelete(itemId: string) {
     try {
@@ -93,12 +105,22 @@ export default function ItensContratoPage() {
         </div>
 
         {isAdmin && (
-          <Button asChild className="bg-brand-navy hover:bg-brand-navy/90">
-            <Link href={`/dashboard/contratos/${contratoId}/itens/novo`}>
-              <Plus className="mr-2 h-4 w-4" />
-              Adicionar Item
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowOCRModal(true)}
+              disabled={loading || !contrato}
+            >
+              <Sparkles className="mr-2 h-4 w-4 text-emerald-600" />
+              Extrair itens com IA
+            </Button>
+            <Button asChild className="bg-brand-navy hover:bg-brand-navy/90">
+              <Link href={`/dashboard/contratos/${contratoId}/itens/novo`}>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar Item
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -135,6 +157,17 @@ export default function ItensContratoPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Modal OCR itens */}
+      {contrato && (
+        <OCRItensModal
+          open={showOCRModal}
+          onOpenChange={setShowOCRModal}
+          contratoId={contratoId}
+          cnpjId={contrato.cnpj_id}
+          onSuccess={handleOCRSuccess}
+        />
+      )}
     </div>
   )
 }
