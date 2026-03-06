@@ -70,7 +70,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
           ) : (
             <div className="flex flex-col gap-1">
-              <Logo className="h-8 w-auto" dark />
+              <Logo className="h-8 w-auto" dark svgBg />
               {empresa && (
                 <p className="truncate text-xs text-white/50 pl-0.5">{empresa.nome_fantasia ?? empresa.razao_social}</p>
               )}
