@@ -61,7 +61,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 unoptimized
               />
             ) : (
-              <Image src="/logo.svg" alt="DUO Governance" width={32} height={32} priority />
+              /* Logo DUO — Esquerda Navy + Direita Verde Esmeralda */
+              <div className="flex gap-0.5">
+                <div className="w-1.5 h-6 bg-[#0F172A] rounded-sm border border-white/10" />
+                <div className="w-1.5 h-6 bg-[#10B981] rounded-sm" />
+              </div>
             )}
           </div>
           <div className="min-w-0 flex-1">
