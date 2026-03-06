@@ -7,6 +7,7 @@ import { MargemIndicator } from '@/components/common/margem-indicator'
 import { contratosService } from '@/lib/services/contratos.service'
 import { itensService, type ItemWithContrato } from '@/lib/services/itens.service'
 import { type ContratoWithRelations } from '@/types/models'
+import { useEmpresa } from '@/contexts/empresa-context'
 import toast from 'react-hot-toast'
 
 function getDiasRestantes(dataVigencia: string): number {
@@ -22,6 +23,7 @@ function corDiasRestantes(dias: number): string {
 }
 
 export function DashboardAlertas() {
+  const { margemAlerta } = useEmpresa()
   const [contratos, setContratos] = useState<ContratoWithRelations[]>([])
   const [itens, setItens] = useState<ItemWithContrato[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,7 +33,7 @@ export function DashboardAlertas() {
       try {
         const [contratosResult, itensResult] = await Promise.all([
           contratosService.getExpiringSoon(30),
-          itensService.getWithMargemBaixa(),
+          itensService.getWithMargemBaixa(margemAlerta),
         ])
         setContratos(contratosResult)
         setItens(itensResult)
@@ -42,7 +44,7 @@ export function DashboardAlertas() {
       }
     }
     load()
-  }, [])
+  }, [margemAlerta])
 
   if (loading) {
     return (

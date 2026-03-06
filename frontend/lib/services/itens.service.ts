@@ -99,10 +99,11 @@ export class ItensService {
   }
 
   /**
-   * Itens com margem abaixo do threshold (alerta disparado pelo trigger).
+   * Itens com margem abaixo do threshold configurado pela empresa.
    * ⚠️ margem_atual calculada pelo trigger atualizar_margem_item() — só exibir (Decisão #3)
+   * @param threshold - margem mínima em % (padrão 10). Vem de empresas.config_json.margem_alerta
    */
-  async getWithMargemBaixa(): Promise<ItemWithContrato[]> {
+  async getWithMargemBaixa(threshold = 10): Promise<ItemWithContrato[]> {
     const { data, error } = await this.supabase
       .from('itens_contrato')
       .select(`
@@ -112,7 +113,8 @@ export class ItensService {
           orgao_publico
         )
       `)
-      .eq('margem_alerta_disparado', true)
+      .lt('margem_atual', threshold)
+      .not('margem_atual', 'is', null)
       .is('deleted_at', null)
       .order('margem_atual', { ascending: true })
 
