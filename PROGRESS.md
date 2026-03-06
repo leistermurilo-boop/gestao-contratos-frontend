@@ -1,7 +1,52 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-03-05 (última atualização — fim do dia)
-**Sessão:** Fase 15 — Fix race condition pós-login (timeout 400ms → 2000ms)
+**Data:** 2026-03-06 (última atualização — fim do dia)
+**Sessão:** Fase 16 — Fix race condition refresh token + Logo SVG isométrico DUO
+
+---
+
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 06/03/2026)
+
+### 🔐 Fix crítico: race condition de refresh token em requests concorrentes
+
+**Sintoma:** Dados sumiam ao trocar de seção; F5 causava loading infinito ou página branca.
+**Causa raiz:** Next.js faz prefetch de links visíveis no viewport simultaneamente. Cada
+prefetch passava pelo middleware e chamava `getUser()`. Com token expirado, múltiplos requests
+tentavam rotacionar o refresh token ao mesmo tempo — Supabase usa single-use tokens, então
+apenas o primeiro sucedia e os demais invalidavam a sessão.
+
+**4 fixes aplicados (`commit b7134c2`):**
+
+1. **`middleware.ts`** — Early return para requests com `next-router-prefetch: 1`. Prefetch não
+   chama `getUser()`, não rota tokens. Request real de navegação faz a validação completa.
+
+2. **`sidebar.tsx`** — `prefetch={false}` em todos os `<Link>` de navegação do `NavItem`.
+   Elimina os requests de prefetch pela raiz — belt-and-suspenders com o fix do middleware.
+
+3. **`auth-context.tsx`** — Quando `INITIAL_SESSION` dispara com `session = null` (sinal de
+   rotação concorrente), tenta `getUser()` + `getSession()` no servidor antes de deslogar.
+   Recupera sessão válida que outro request já rotacionou com sucesso.
+
+4. **`empresa-context.tsx`** — `useMemo` no context value + `useCallback` em `refreshEmpresa`
+   para evitar re-renders em cascata nos consumers após cada `processSession`.
+
+---
+
+### 🎨 Logo SVG isométrico oficial DUO
+
+**Commits:** `b7b8da0`, `e270322`
+
+- **`components/ui/logo.tsx`** (novo) — Componente SVG com duas torres isométricas:
+  esquerda navy `#0F172A` + direita emerald `#10B981`. Props:
+  - `dark` — texto branco, stroke sutil na torre navy
+  - `svgBg` — círculo branco `rounded-full bg-white` apenas em volta do SVG (para sidebar)
+
+- **`app/(auth)/layout.tsx`** — Substituiu dois-bares inline por `<Logo className="h-14 w-auto" />`
+
+- **`components/layout/sidebar.tsx`** — `<Logo dark svgBg className="h-8 w-auto" />`.
+  O círculo branco torna a torre navy visível sobre o fundo navy da sidebar.
+
+---
 
 ---
 
