@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { FileText } from 'lucide-react'
+import { FileText, Sparkles } from 'lucide-react'
 import {
   Form,
   FormControl,
@@ -64,15 +64,28 @@ interface CnpjOption {
   razao_social: string
 }
 
+/** Dados vindos do OCR para pré-preenchimento no modo create */
+export interface ContratoPrefill {
+  numero_contrato?: string
+  orgao_publico?: string
+  data_vigencia_inicio?: string
+  data_vigencia_fim?: string
+  valor_total?: number | ''
+  objeto?: string
+  cnpj_orgao?: string
+}
+
 interface ContratoFormProps {
   mode?: 'create' | 'edit'
   /** ID do contrato — obrigatório quando mode='edit' */
   contratoId?: string
   /** Dados existentes para pré-preenchimento — obrigatório quando mode='edit' */
   initialData?: ContratoWithRelations
+  /** Dados do OCR para pré-preenchimento — apenas no modo create */
+  prefill?: ContratoPrefill
 }
 
-export function ContratoForm({ mode = 'create', contratoId, initialData }: ContratoFormProps) {
+export function ContratoForm({ mode = 'create', contratoId, initialData, prefill }: ContratoFormProps) {
   const router = useRouter()
   const { empresa } = useEmpresa()
   const [cnpjs, setCnpjs] = useState<CnpjOption[]>([])
@@ -83,16 +96,16 @@ export function ContratoForm({ mode = 'create', contratoId, initialData }: Contr
     resolver: zodResolver(contratoSchema),
     defaultValues: {
       cnpj_id: '',
-      numero_contrato: '',
-      orgao_publico: '',
-      valor_total: 0,
+      numero_contrato: prefill?.numero_contrato ?? '',
+      orgao_publico: prefill?.orgao_publico ?? '',
+      valor_total: (prefill?.valor_total as number) || 0,
       data_assinatura: '',
-      data_vigencia_inicio: '',
-      data_vigencia_fim: '',
-      objeto: '',
+      data_vigencia_inicio: prefill?.data_vigencia_inicio ?? '',
+      data_vigencia_fim: prefill?.data_vigencia_fim ?? '',
+      objeto: prefill?.objeto ?? '',
       esfera: '',
       indice_reajuste: '',
-      cnpj_orgao: '',
+      cnpj_orgao: prefill?.cnpj_orgao ?? '',
     },
   })
 
@@ -212,6 +225,15 @@ export function ContratoForm({ mode = 'create', contratoId, initialData }: Contr
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Banner OCR */}
+        {mode === 'create' && prefill && (
+          <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <Sparkles className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>
+              Campos pré-preenchidos por IA. Revise e complete os dados obrigatórios restantes.
+            </span>
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           {/* CNPJ da empresa */}
           <FormField
