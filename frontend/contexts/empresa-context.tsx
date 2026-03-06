@@ -9,6 +9,9 @@ interface Empresa {
   razao_social: string
   nome_fantasia: string | null
   logo_url: string | null
+  plano_id: string | null
+  nivel_maturidade: number
+  pontuacao_maturidade: number
   created_at: string
   updated_at: string
   config_json: {

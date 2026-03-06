@@ -1,7 +1,23 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-02-25 (última atualização — fim do dia)
-**Sessão:** Fase 14 — Estabilidade de Auth + Blueprint Suporte + Testes em Produção
+**Data:** 2026-03-05 (última atualização — fim do dia)
+**Sessão:** Fase 15 — Fix race condition pós-login (timeout 400ms → 2000ms)
+
+---
+
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 05/03/2026)
+
+### Fix race condition pós-login — `DashboardLayout`:
+
+**Sintoma:** Após login, dashboard às vezes redirecionava para `/login` ou travava em spinner.
+
+**Causa:** `processSession` do AuthProvider pode levar até 1.5s (fetch Supabase + validação
+usuário ativo). O debounce anterior de 400ms era insuficiente — `signIn()` retorna antes de
+`processSession` completar, gerando janela breve de `user=null` no `DashboardLayout` que
+disparava redirect prematuro para `/login`.
+
+**Fix:** `frontend/app/(dashboard)/layout.tsx` — timeout 400ms → 2000ms.
+**Commit:** `4915187` — push para main + Vercel deploy.
 
 ---
 

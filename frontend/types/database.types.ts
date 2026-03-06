@@ -15,6 +15,9 @@ export interface Database {
           razao_social: string
           nome_fantasia: string | null
           logo_url: string | null
+          plano_id: string | null           // FK → planos.id (Migration 015)
+          nivel_maturidade: number          // badge visual 1–5 (Migration 015)
+          pontuacao_maturidade: number      // pontos de engajamento (Migration 015)
           created_at: string
           updated_at: string
           config_json: Json | null
@@ -24,6 +27,9 @@ export interface Database {
           razao_social: string
           nome_fantasia?: string | null
           logo_url?: string | null
+          plano_id?: string | null
+          nivel_maturidade?: number
+          pontuacao_maturidade?: number
           created_at?: string
           updated_at?: string
           config_json?: Json | null
@@ -33,9 +39,94 @@ export interface Database {
           razao_social?: string
           nome_fantasia?: string | null
           logo_url?: string | null
+          plano_id?: string | null
+          nivel_maturidade?: number
+          pontuacao_maturidade?: number
           created_at?: string
           updated_at?: string
           config_json?: Json | null
+        }
+      }
+      planos: {
+        Row: {
+          id: string
+          nome: string
+          tagline: string | null
+          preco_mensal: number
+          preco_anual: number
+          total_anual: number
+          desconto_anual_pct: number
+          nivel_maximo_visual: number
+          limite_ocr_mes: number
+          radar_b2g: boolean
+          newsletter: boolean
+          api_pncp: boolean
+          api_ibge: boolean
+          cruzamento_macro: boolean
+          created_at: string
+        }
+        Insert: {
+          id: string
+          nome: string
+          tagline?: string | null
+          preco_mensal: number
+          preco_anual: number
+          total_anual: number
+          desconto_anual_pct?: number
+          nivel_maximo_visual?: number
+          limite_ocr_mes?: number
+          radar_b2g?: boolean
+          newsletter?: boolean
+          api_pncp?: boolean
+          api_ibge?: boolean
+          cruzamento_macro?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          nome?: string
+          tagline?: string | null
+          preco_mensal?: number
+          preco_anual?: number
+          total_anual?: number
+          desconto_anual_pct?: number
+          nivel_maximo_visual?: number
+          limite_ocr_mes?: number
+          radar_b2g?: boolean
+          newsletter?: boolean
+          api_pncp?: boolean
+          api_ibge?: boolean
+          cruzamento_macro?: boolean
+          created_at?: string
+        }
+      }
+      niveis_maturidade: {
+        Row: {
+          id: number
+          nome: string
+          descricao: string | null
+          pontos_min: number
+          pontos_max: number | null
+          cor: string
+          created_at: string
+        }
+        Insert: {
+          id: number
+          nome: string
+          descricao?: string | null
+          pontos_min: number
+          pontos_max?: number | null
+          cor: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          nome?: string
+          descricao?: string | null
+          pontos_min?: number
+          pontos_max?: number | null
+          cor?: string
+          created_at?: string
         }
       }
       usuarios: {

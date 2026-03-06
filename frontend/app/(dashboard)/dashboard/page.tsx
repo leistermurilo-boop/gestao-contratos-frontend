@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { DashboardCards } from '@/components/charts/dashboard-cards'
 import { DashboardAlertas } from '@/components/charts/dashboard-alertas'
+import { IndiceWidgetWrapper } from '@/components/maturidade/indice-widget-wrapper'
 
 // ssr: false — recharts usa useLayoutEffect e browser APIs (ResizeObserver).
 // Sem isso, o SSR do Node.js falha silenciosamente → RSC payload malformado
@@ -115,6 +116,13 @@ export default function DashboardPage() {
           Alertas
         </h2>
         <DashboardAlertas />
+      </div>
+
+      {/* Índice de Maturidade DUO™ */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-1">
+          <IndiceWidgetWrapper />
+        </div>
       </div>
 
       {/* Cards dos módulos */}

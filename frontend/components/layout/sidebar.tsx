@@ -150,8 +150,8 @@ function NavItem({ route, isActive, onClick }: NavItemProps) {
       className={cn(
         'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
         isActive
-          ? 'bg-brand-emerald text-white'
-          : 'text-white/70 hover:bg-white/10 hover:text-white'
+          ? 'bg-white/10 text-white border-l-2 border-brand-emerald pl-2.5'
+          : 'text-white/70 hover:bg-white/10 hover:text-white border-l-2 border-transparent pl-2.5'
       )}
     >
       <Icon className="h-4 w-4 flex-shrink-0" />
