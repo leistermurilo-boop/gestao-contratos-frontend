@@ -8,11 +8,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useEmpresa } from '@/contexts/empresa-context'
 
 interface MargemIndicatorProps {
   /** Valor da margem em % — calculado pelo trigger no banco (Decisão #3) */
   margem: number | null
-  /** Limiar de alerta — abaixo disso é vermelho. Padrão: margemAlerta do EmpresaContext */
+  /** Limiar de alerta — abaixo disso é vermelho. Se omitido, usa margemAlerta do EmpresaContext */
   threshold?: number
   showIcon?: boolean
   showValue?: boolean
@@ -27,18 +28,20 @@ function getColor(margem: number, threshold: number): string {
 
 export function MargemIndicator({
   margem,
-  threshold = 10,
+  threshold,
   showIcon = true,
   showValue = true,
   className,
 }: MargemIndicatorProps) {
+  const { margemAlerta } = useEmpresa()
+  const effectiveThreshold = threshold ?? margemAlerta
   if (margem === null || margem === undefined) {
     return <span className={cn('text-sm text-muted-foreground', className)}>N/A</span>
   }
 
-  const color = getColor(margem, threshold)
-  const isAbaixo = margem < threshold
-  const isAtencao = !isAbaixo && margem < threshold * 2
+  const color = getColor(margem, effectiveThreshold)
+  const isAbaixo = margem < effectiveThreshold
+  const isAtencao = !isAbaixo && margem < effectiveThreshold * 2
 
   const Icon = isAbaixo ? TrendingDown : isAtencao ? Minus : TrendingUp
 
@@ -63,7 +66,7 @@ export function MargemIndicator({
               <strong>Margem:</strong> {margem.toFixed(2)}%
             </p>
             <p>
-              <strong>Alerta abaixo de:</strong> {threshold}%
+              <strong>Alerta abaixo de:</strong> {effectiveThreshold}%
             </p>
             {isAbaixo && (
               <p className="font-semibold text-red-400">Abaixo do esperado</p>
