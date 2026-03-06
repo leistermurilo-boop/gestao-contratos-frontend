@@ -12,8 +12,7 @@ export interface AgentConfig {
 export interface AgentRequest {
   prompt: string
   systemPrompt?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tools?: any[]
+  tools?: unknown[]
 }
 
 export interface AgentResponse {
@@ -29,8 +28,7 @@ export interface AgentResponse {
 // ============================================
 
 export interface OCRCampoExtraido {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  valor: any
+  valor: unknown
   confidence: number
 }
 
