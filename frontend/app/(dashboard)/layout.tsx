@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -10,34 +10,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, loading } = useAuth()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    // Limpar timer anterior se o estado mudou (ex: TOKEN_REFRESHED restaurou o usuário)
-    if (redirectTimerRef.current) {
-      clearTimeout(redirectTimerRef.current)
-      redirectTimerRef.current = null
-    }
-
+    // Só redirecionar quando auth estiver totalmente resolvido sem usuário.
+    // Enquanto loading=true, o middleware já garantiu autenticação — não redirecionar.
     if (!loading && !user) {
-      // TIMING CRÍTICO: processSession do AuthProvider pode levar até 1.5s
-      // (fetch Supabase + validação usuário ativo). Timer de redirect deve
-      // aguardar auth estabilizar antes de redirecionar usuário não autenticado.
-      // 2000ms garante margem segura mesmo em conexões lentas e cobre o caso
-      // de race condition pós-login (signIn() retorna antes de processSession
-      // completar, causando janela breve de user=null no DashboardLayout).
-      redirectTimerRef.current = setTimeout(() => {
-        router.push('/login')
-      }, 2000)
-    }
-
-    return () => {
-      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
+      router.push('/login')
     }
   }, [loading, user, router])
 
-  // Bloquear render enquanto carrega
-  if (loading) {
+  // Enquanto não autenticado (e auth já resolveu), mostrar spinner durante redirect
+  if (!loading && !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-navy"></div>
@@ -45,16 +28,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  // Enquanto router.push('/login') navega, manter spinner em vez de null
-  // para evitar janela de tela branca entre signOut e a navegação completar
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-navy"></div>
-      </div>
-    )
-  }
-
+  // Renderizar layout completo imediatamente — sidebar e header lidam com null graciosamente.
+  // O middleware já garantiu que apenas usuários autenticados chegam aqui.
+  // Isso elimina o spinner em branco durante a inicialização do Supabase client (200-500ms).
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
