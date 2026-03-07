@@ -58,14 +58,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/login') && user) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
-    const redirectResponse = NextResponse.redirect(url)
-    // P1: Propagar cookies de supabaseResponse (pode conter tokens renovados por setAll).
-    // Se getUser() rotacionou o refresh token, os novos cookies estão em supabaseResponse —
-    // sem esta cópia, o browser recebe o redirect sem Set-Cookie e continua com token velho.
-    supabaseResponse.cookies.getAll().forEach(cookie => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-    })
-    return redirectResponse
+    return NextResponse.redirect(url)
   }
 
   // Rota protegida sem sessão → redireciona para login
@@ -73,12 +66,7 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirect', pathname)
-    const redirectResponse = NextResponse.redirect(url)
-    // P1: Mesmo padrão — propagar cookies mesmo sem user (refresh token pode estar presente).
-    supabaseResponse.cookies.getAll().forEach(cookie => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-    })
-    return redirectResponse
+    return NextResponse.redirect(url)
   }
 
   // IMPORTANTE: retornar supabaseResponse (não NextResponse.next()) para garantir
