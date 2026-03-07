@@ -1,6 +1,106 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-03-06 (última atualização — fim do dia)
+**Data:** 2026-03-07 (última atualização — fim do dia)
+**Sessão:** Sprint 3 — OCR IA (extração de contratos e itens) + Diagnóstico RLS
+
+---
+
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 06/03/2026)
+
+### 🤖 Sprint 3A — Backend OCR (Anthropic API)
+
+- **`lib/agents/core/claude-client.ts`** — Integração real com `@anthropic-ai/sdk` (era stub vazio)
+- **`lib/agents/ocr/system-prompt.ts`** — Prompt para extração do cabeçalho do contrato (campos + confidence scores)
+- **`lib/agents/ocr/system-prompt-itens.ts`** — Prompt para extração de itens (coluna MARCA/MODELO, não Descrição)
+- **`lib/agents/ocr/system-prompt-combined.ts`** — Prompt combinado: contrato + itens em uma só chamada Claude
+- **`app/api/ocr/extract-contract/route.ts`** — Endpoint extração contrato. PDF enviado como `type: 'document'` (base64); imagens como `type: 'image'`
+- **`app/api/ocr/extract-items/route.ts`** — Endpoint extração itens. Retorna `ExtractItemsResult`
+- **`app/api/ocr/extract-all/route.ts`** — Endpoint combinado (1 chamada Claude = cabeçalho + itens). Soluciona o problema de upload duplo.
+- **`ANTHROPIC_API_KEY`** adicionado ao `.env`. ⚠️ Precisa adicionar também no Vercel (variável de ambiente)
+
+### 🎨 Sprint 3B — UI Upload & Preview OCR
+
+- **`components/contratos/ocr-upload-modal.tsx`** — Modal drag & drop com progress bar. Prop `fetchFn` permite usar endpoint customizado
+- **`components/contratos/ocr-preview-form.tsx`** — Preview dos campos extraídos com indicadores de confidence (verde/âmbar/vermelho). Mapeamento OCR → colunas reais do DB
+- **`components/forms/contrato-form.tsx`** — Interface `ContratoPrefill` + prop `prefill` para pré-preenchimento via OCR. Prop `onSaveSuccess(contratoId, cnpjId)` para fluxo pós-save
+
+### 📦 Sprint 3C — Extração de Itens em Lote
+
+- **`components/contratos/ocr-itens-modal.tsx`** — Modal completo: upload → loading → tabela editável → save em lote. Prop `prefetchedData` pula etapa de upload (dados já extraídos junto com o contrato)
+- **`app/(dashboard)/dashboard/contratos/novo/page.tsx`** — Reescrito: fluxo 4 etapas (choice → ocr-preview → form → items). Usa `/api/ocr/extract-all` (1 único upload). Itens ficam em memória até contrato ser salvo, depois abre `OCRItensModal` com `prefetchedData`
+- **`app/(dashboard)/dashboard/contratos/[id]/itens/page.tsx`** — Botão "Extrair itens com IA" (admin only) com `OCRItensModal`
+
+### 🔍 Diagnóstico RLS — Causa Raiz Identificada
+
+**Problema relatado:** Não conseguia excluir/arquivar contratos ou itens — erro "violates row-level security policy"
+
+**Causa raiz confirmada via `information_schema` + `pg_policies`:**
+
+1. **`contratos` não tem coluna `deleted_at`** — a tabela real tem apenas 10 colunas: `id, empresa_id, numero_contrato_arp, orgao_publico, objeto, data_assinatura, data_vencimento, valor_total_contrato, status, created_at`. O `softDelete()` tenta `UPDATE SET deleted_at = NOW()` em coluna inexistente.
+
+2. **`itens_contrato` tem RLS desabilitado** (`relrowsecurity = false`) — as políticas existem mas não são aplicadas.
+
+3. **`contratos_select` policy não filtra `deleted_at IS NULL`** — sem a coluna, a policy foi criada sem esse filtro.
+
+**Migration 019 preparada (SQL pronto, não confirmado aplicado):**
+```sql
+ALTER TABLE contratos ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
+ALTER TABLE contratos ADD COLUMN IF NOT EXISTS deleted_by UUID DEFAULT NULL;
+ALTER TABLE itens_contrato ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
+ALTER TABLE itens_contrato ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS contratos_select ON contratos;
+CREATE POLICY contratos_select ON contratos FOR SELECT
+  USING (empresa_id IN (SELECT empresa_id FROM usuarios WHERE id = auth.uid()) AND deleted_at IS NULL);
+DROP POLICY IF EXISTS itens_select ON itens_contrato;
+CREATE POLICY itens_select ON itens_contrato FOR SELECT
+  USING (deleted_at IS NULL AND contrato_id IN (SELECT id FROM contratos WHERE empresa_id IN (SELECT empresa_id FROM usuarios WHERE id = auth.uid())));
+```
+
+**Status:** SQL ainda não confirmado funcionando — testar na próxima sessão.
+
+---
+
+## 📁 ARQUIVOS CRIADOS/MODIFICADOS (sessão 06/03/2026)
+
+```
+database/migrations/
+├── MIGRATION 017.sql   ✅ Tabela ocr_learning + RLS
+└── MIGRATION 019.sql   ⏳ deleted_at + enable RLS itens_contrato (preparado, não aplicado)
+
+frontend/
+├── lib/agents/
+│   ├── core/claude-client.ts              🔄 Integração real Anthropic SDK
+│   └── ocr/
+│       ├── system-prompt.ts               ✅ Prompt extração cabeçalho contrato
+│       ├── system-prompt-itens.ts         ✅ Prompt extração itens (MARCA/MODELO)
+│       └── system-prompt-combined.ts      ✅ Prompt combinado (1 chamada)
+├── app/api/ocr/
+│   ├── extract-contract/route.ts          ✅ Endpoint extração contrato
+│   ├── extract-items/route.ts             ✅ Endpoint extração itens
+│   └── extract-all/route.ts              ✅ Endpoint combinado
+├── components/contratos/
+│   ├── ocr-upload-modal.tsx               ✅ Modal upload drag & drop
+│   ├── ocr-preview-form.tsx               ✅ Preview com confidence indicators
+│   └── ocr-itens-modal.tsx                ✅ Modal itens: upload→preview→save
+├── components/forms/
+│   └── contrato-form.tsx                  🔄 + ContratoPrefill + onSaveSuccess
+└── app/(dashboard)/dashboard/contratos/
+    ├── novo/page.tsx                      🔄 Fluxo 4-etapas com OCR
+    └── [id]/itens/page.tsx                🔄 + botão "Extrair itens com IA"
+```
+
+---
+
+## ⚠️ PENDÊNCIAS CRÍTICAS PARA PRÓXIMA SESSÃO
+
+1. **Aplicar Migration 019** — rodar o SQL acima no Supabase SQL Editor. Sem isso, soft delete continua falhando.
+2. **Testar excluir/arquivar contrato** após migration
+3. **Testar excluir item** após migration
+4. **Adicionar `ANTHROPIC_API_KEY` no Vercel** — sem isso OCR não funciona em produção
+5. **Testar fluxo OCR completo** em produção: upload PDF → preview → form → save → itens
+
+---
+
 **Sessão:** Fase 16 — Fix race condition refresh token + Logo SVG isométrico DUO
 
 ---
