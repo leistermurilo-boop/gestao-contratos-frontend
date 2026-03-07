@@ -113,10 +113,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Se session é null no INITIAL_SESSION, pode ser race condition de rotação
             // concorrente de tokens (outro request rotacionou antes e invalidou este).
             // Verificar com o servidor se ainda há sessão válida antes de deslogar.
-            const { data: { user: serverUser } } = await supabase.auth.getUser()
-            if (serverUser) {
-              const { data: { session: freshSession } } = await supabase.auth.getSession()
-              await processSession(freshSession)
+            // P3: try-catch obrigatório — se getUser() lançar exceção (timeout de rede,
+            // falha de DNS, etc.), processSession nunca seria chamado e loading ficaria
+            // true para sempre, causando spinner infinito.
+            try {
+              const { data: { user: serverUser }, error } = await supabase.auth.getUser()
+              if (error) {
+                console.error('Erro ao recuperar usuário no INITIAL_SESSION:', error)
+                setLoading(false)
+                return
+              }
+              if (serverUser) {
+                const { data: { session: freshSession } } = await supabase.auth.getSession()
+                await processSession(freshSession)
+                return
+              }
+            } catch (err) {
+              // Exceção capturada → garantir que loading não fica preso
+              console.error('Exceção ao recuperar sessão no INITIAL_SESSION:', err)
+              setLoading(false)
               return
             }
           }
@@ -199,8 +214,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refreshUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    await processSession(session)
+    // P2: Usar getUser() (valida com servidor) em vez de getSession() (lê cache local).
+    // getSession() pode retornar sessão com token expirado do storage local,
+    // fazendo processSession tratar uma sessão inválida como válida.
+    try {
+      const { data: { user: serverUser }, error } = await supabase.auth.getUser()
+      if (error) {
+        console.error('Erro ao validar usuário em refreshUser:', error)
+        await processSession(null)
+        return
+      }
+      if (serverUser) {
+        const { data: { session } } = await supabase.auth.getSession()
+        await processSession(session)
+      } else {
+        await processSession(null)
+      }
+    } catch (err) {
+      console.error('Exceção em refreshUser:', err)
+      await processSession(null)
+    }
   }
 
   return (
