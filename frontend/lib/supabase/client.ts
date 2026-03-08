@@ -19,7 +19,7 @@ export function createClient() {
         // Sem este bypass: múltiplos caminhos concorrentes de auth-context
         // (getSession + INITIAL_SESSION + safety timeout) travam o lock
         // exclusivo por até 10s → login falha com "LockManager timed out".
-        lock: (_name: string, _timeout: number, fn: () => Promise<unknown>) => fn(),
+        lock: <R>(_name: string, _timeout: number, fn: () => Promise<R>): Promise<R> => fn(),
       },
     }
   )
