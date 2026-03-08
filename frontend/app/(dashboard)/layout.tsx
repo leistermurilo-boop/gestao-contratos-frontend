@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -10,17 +10,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, loading } = useAuth()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    // Só redirecionar quando auth estiver totalmente resolvido sem usuário.
-    // Enquanto loading=true, o middleware já garantiu autenticação — não redirecionar.
+    if (redirectTimerRef.current) {
+      clearTimeout(redirectTimerRef.current)
+      redirectTimerRef.current = null
+    }
+
     if (!loading && !user) {
-      router.push('/login')
+      // Timer evita redirect prematuro durante race condition pós-login:
+      // signIn() pode retornar antes de processSession completar, causando
+      // janela breve de user=null. 2000ms garante que auth estabilize primeiro.
+      redirectTimerRef.current = setTimeout(() => {
+        router.push('/login')
+      }, 2000)
+    }
+
+    return () => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
     }
   }, [loading, user, router])
 
-  // Enquanto não autenticado (e auth já resolveu), mostrar spinner durante redirect
-  if (!loading && !user) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-navy"></div>
@@ -28,22 +40,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  // Renderizar estrutura do layout imediatamente (sidebar + header lidam com null).
-  // Children só montam após loading=false para evitar queries antes do auth resolver.
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-navy"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {/* Conteúdo principal com offset da sidebar no desktop */}
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 p-4 lg:p-6">
-          {loading ? (
-            <div className="flex min-h-[400px] items-center justify-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-navy" />
-            </div>
-          ) : children}
-        </main>
+        <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>
     </div>
   )
