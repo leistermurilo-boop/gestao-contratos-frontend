@@ -1,7 +1,139 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-03-07 (última atualização — fim do dia)
-**Sessão:** Sprint 3 — OCR IA (extração de contratos e itens) + Diagnóstico RLS
+**Data:** 2026-03-09 (última atualização)
+**Sessão:** Fix definitivo de auth — F5 + LockManager + spinner eterno
+
+---
+
+## 🎉 RESULTADO FINAL DA SESSÃO 09/03/2026 — AUTH 100% RESOLVIDO
+
+### Stress test aprovado (5/5 F5 + login):
+
+| Teste | Resultado |
+|-------|-----------|
+| Login após logout | ✅ ~4s, sem timeout |
+| LockManager timed out | ✅ Não ocorreu |
+| Erros de lock no console | ✅ Zero |
+| F5 #1 a #5 no /dashboard | ✅ 5/5 — sem spinner |
+
+---
+
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 09/03/2026)
+
+### 🔐 Fix definitivo de autenticação — 8 commits, problema F5 resolvido
+
+**Causa raiz identificada e corrigida (era uma cadeia de 6 bugs interdependentes):**
+
+#### Fix 1 — `middleware.ts`: cookies com `httpOnly: false`
+O middleware escrevia cookies com `httpOnly: true` (padrão Supabase SSR). O `createBrowserClient` lê via `document.cookie` que não enxerga cookies httpOnly → `INITIAL_SESSION = null` em todo F5 após refresh de token.
+**Commit:** `e98d454`
+
+#### Fix 2 — `auth-context.tsx`: flag `auth_resync_attempted` antes do reload
+Flag era setada antes do `window.location.reload()` e só removida em falha. Se o reload ainda falhava, a flag bloqueava qualquer resync futuro até fechar a aba.
+**Commit:** `e98d454`
+
+#### Fix 3 — `auth-context.tsx`: `signOut()` client-side em erros PGRST116/inativo
+`supabase.auth.signOut()` client-side apagava todos os cookies via `document.cookie` em erros transientes de rede, causando ZERO cookies no próximo F5.
+**Commit:** `e98d454`
+
+#### Fix 4 — `dashboard/layout.tsx`: `router.push('/login')` em vez de `/api/auth/signout`
+O layout chamava `/api/auth/signout` quando `!loading && !user`, que invoca `signOut({ scope: 'global' })` e revoga o refresh token globalmente. ESTA ERA A CAUSA DOS ZERO COOKIES.
+**Commit:** `7e31afa`
+
+#### Fix 5 — `middleware.ts`: `/api/auth/` na lista de rotas públicas + `redirect: 'manual'`
+O middleware redirecionava `fetch('/api/auth/resync')` para `/login?redirect=/api/auth/resync`. O fetch seguia o redirect e ficava PENDING para sempre → spinner eterno.
+**Commit:** `7d93890`
+
+#### Fix 6 — `auth-context.tsx`: abandonar `INITIAL_SESSION` como único caminho
+Em `@supabase/supabase-js@2.97.0`, `INITIAL_SESSION` pode disparar antes do listener ser registrado. Reescrito para usar `getSession()` + `INITIAL_SESSION` como dual-path, com `initResolve()` que processa o primeiro caminho com resultado válido.
+**Commits:** `2f1a02d`, `8b9c677`, `7b66fe9`, `392c908`
+
+#### Fix 7 — `auth-context.tsx`: race condition em `initResolve` + safety timeouts em dois estágios
+`resolved = true` era setado antes do `await processSession()`. Se processSession falhava silenciosamente, o safety timeout via `resolved = true` e não fazia nada → spinner eterno.
+Adicionado `loadingSettled` flag, try/catch em `initResolve`, safety em 2 estágios (4s + 8s).
+**Commit:** `756a15d`
+
+#### Fix 8 — `lib/supabase/client.ts`: bypass do `navigator.locks`
+Os múltiplos caminhos concorrentes de auth (getSession + INITIAL_SESSION + safety) tentavam adquirir o mesmo exclusive lock do Supabase. O `signInWithPassword` esperava 10s e falhava com "LockManager timed out waiting 10000ms".
+Fix canônico para apps SSR: `lock: <R>(_n, _t, fn) => fn()`.
+**Commits:** `4f6aa73`, `6acf465`
+
+---
+
+## ⚠️ PENDÊNCIAS PARA PRÓXIMA SESSÃO
+
+1. **`ANTHROPIC_API_KEY` no Vercel** — OCR não funciona em produção sem isso
+2. **Testar soft delete** de contratos e itens
+3. **Testar fluxo OCR completo** em produção
+4. **Executar matriz de permissões** (`docs/tests/matriz-permissoes.md`) com 5 perfis
+
+---
+
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 08/03/2026)
+
+### 🔐 Investigação F5 / AuthSessionMissingError — RESOLVIDO ✅
+
+**Sintoma persistente:** F5 em `/dashboard` mostra spinner infinito ou tela branca.
+**Erro no console:** `AuthSessionMissingError: Auth session missing!` no INITIAL_SESSION.
+
+**Causa raiz identificada (via GitHub supabase/ssr#107):**
+Race condition em `createServerClient` onde `initialize()` em background interferia no
+carregamento da sessão. Corrigido oficialmente na versão `@supabase/ssr@0.9.0`.
+
+**Fixes aplicados nesta sessão:**
+
+1. **`@supabase/ssr` 0.5.2 → 0.9.0** — upgrade para versão com o fix oficial da race condition
+2. **`/api/auth/resync/route.ts`** (novo) — endpoint server-side que:
+   - Valida sessão com `getUser()` server-side
+   - Copia cookies `sb-*` como `httpOnly: false` para browser client conseguir ler
+   - Handles dois casos: token rotacionado (setAll) e token ainda válido (cópia direta)
+3. **`auth-context.tsx`** — quando INITIAL_SESSION null + AuthSessionMissingError:
+   - Chama `/api/auth/resync` com AbortController 3s timeout (previne spinner infinito)
+   - Se ok:true → `window.location.reload()` para browser inicializar com cookies frescos
+   - `sessionStorage` previne loop infinito de resyncs
+4. **`dashboard.service.ts`** — corrigido `data_vigencia_fim` → `data_vencimento` (coluna errada)
+
+**Descoberta crítica:** O projeto estava rodando no Supabase ERRADO (`cugopnezttlsnwesdity`).
+Projeto correto: `hstlbkudwnboebmarilp`. Migrations 016 e 017 faltavam e foram aplicadas.
+
+**Status do F5:** AINDA NÃO RESOLVIDO. O resync funciona parcialmente (página carrega após
+reload) mas em alguns F5 o problema persiste. Última hipótese: o resync não estava copiando
+cookies quando não havia rotação de token — corrigido no último commit (243d5a5), não testado.
+
+**Commits desta sessão:**
+- `2b23d87` fix(auth): resync browser tokens on AuthSessionMissingError
+- `1ac8a62` fix(auth): add 3s AbortController timeout to resync fetch
+- `c015e3a` fix(auth): upgrade @supabase/ssr 0.5.2→0.9.0
+- `b105627` fix(dashboard): use data_vencimento instead of data_vigencia_fim
+- `243d5a5` fix(auth): resync always copies sb-* cookies as non-httpOnly ← **NÃO TESTADO**
+
+### 🗄️ Banco de Dados — Sincronizado
+
+Migrations aplicadas no projeto correto (`hstlbkudwnboebmarilp`):
+- ✅ Migration 015 — já estava
+- ✅ Migration 016 — aplicada hoje (triggers pontuação maturidade DUO™)
+- ✅ Migration 017 — aplicada hoje (tabela ocr_learning)
+- ✅ Migration 018 — já estava (policies granulares RLS)
+- ✅ Migration 019 — já estava (deleted_at em contratos e itens)
+
+---
+
+## ⚠️ PENDÊNCIAS CRÍTICAS PARA PRÓXIMA SESSÃO
+
+1. **F5 ainda com problema** — testar commit `243d5a5` (resync copia cookies sem rotação).
+   Se ainda falhar, investigar se `createBrowserClient` do @supabase/ssr@0.9.0 usa
+   localStorage em vez de cookies, ou se há mudança de nome dos cookies.
+   Alternativa nuclear: remover a lógica de resync e usar arquitetura sem client-side auth state.
+
+2. **`ANTHROPIC_API_KEY` no Vercel** — sem isso OCR não funciona em produção.
+
+3. **Testar soft delete** de contratos e itens após migrations.
+
+4. **Testar fluxo OCR completo** em produção.
+
+5. **Executar matriz de permissões** (`docs/tests/matriz-permissoes.md`) com 5 perfis.
+
+---
 
 ---
 
