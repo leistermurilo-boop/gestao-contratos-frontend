@@ -85,6 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUsuario(usuarioData)
+      // Resync bem-sucedido: limpar flag para não bloquear tentativas futuras
+      sessionStorage.removeItem('auth_resync_attempted')
     } catch (err) {
       console.error('Erro inesperado em processSession:', err)
     } finally {
@@ -119,8 +121,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               const { data: { user: serverUser }, error } = await supabase.auth.getUser()
               if (error) {
-                // getUser() retornou erro (ex: AuthSessionMissingError, timeout).
-                // Não há sessão válida — encerrar loading para permitir redirect natural.
+                // AuthSessionMissingError: browser client não tem tokens (ex: rotação de token
+                // consumiu refresh token de uso único em race condition de múltiplas requisições).
+                // Verificar com servidor se ainda há sessão válida antes de deslogar.
+                if (!sessionStorage.getItem('auth_resync_attempted')) {
+                  try {
+                    sessionStorage.setItem('auth_resync_attempted', '1')
+                    const res = await fetch('/api/auth/resync')
+                    const { ok } = await res.json()
+                    if (ok) {
+                      // Servidor reescreveu cookies legíveis — recarregar para browser
+                      // client inicializar com tokens frescos no próximo INITIAL_SESSION.
+                      window.location.reload()
+                      return
+                    }
+                  } catch {
+                    // Resync falhou (rede) — prosseguir para setLoading(false)
+                  }
+                  sessionStorage.removeItem('auth_resync_attempted')
+                }
+                // Sem sessão no servidor (ou segunda tentativa após resync) — encerrar loading.
                 console.error('Erro ao recuperar usuário no INITIAL_SESSION:', error)
                 setLoading(false)
                 return
