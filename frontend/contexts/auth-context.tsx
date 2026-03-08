@@ -119,8 +119,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               const { data: { user: serverUser }, error } = await supabase.auth.getUser()
               if (error) {
+                // AuthSessionMissingError ou similar: browser client sem tokens mas
+                // middleware server-side pode ainda ver sessão válida (cookies httpOnly).
+                // router.push('/login') causaria redirect loop (middleware redireciona de volta).
+                // Solução: signout server-side limpa TODOS os cookies e vai para /login limpo.
                 console.error('Erro ao recuperar usuário no INITIAL_SESSION:', error)
                 setLoading(false)
+                window.location.href = '/api/auth/signout'
                 return
               }
               if (serverUser) {
