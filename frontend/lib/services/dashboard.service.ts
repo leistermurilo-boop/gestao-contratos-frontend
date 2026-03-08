@@ -100,8 +100,8 @@ export class DashboardService {
         .select('id', { count: 'exact', head: true })
         .eq('status', 'ativo')
         .is('deleted_at', null)
-        .gte('data_vigencia_fim', hojeStr)
-        .lte('data_vigencia_fim', em30DiasStr),
+        .gte('data_vencimento', hojeStr)
+        .lte('data_vencimento', em30DiasStr),
       this.supabase
         .from('autorizacoes_fornecimento')
         .select('id', { count: 'exact', head: true })
