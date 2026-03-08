@@ -15,7 +15,10 @@ import type { CookieOptions } from '@supabase/ssr'
 export async function GET(request: NextRequest) {
   // Criar o redirect ANTES de instanciar o client — o setAll() escreve
   // os cookies expirados direto nessa response (mesma técnica do middleware).
-  const response = NextResponse.redirect(new URL('/login', request.url))
+  const loginUrl = new URL('/login', request.url)
+  const errorParam = request.nextUrl.searchParams.get('error')
+  if (errorParam) loginUrl.searchParams.set('error', errorParam)
+  const response = NextResponse.redirect(loginUrl)
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

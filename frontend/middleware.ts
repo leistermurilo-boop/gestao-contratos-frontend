@@ -32,7 +32,11 @@ export async function middleware(request: NextRequest) {
           )
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options ?? {})
+            // httpOnly: false garante que createBrowserClient consegue ler os
+            // cookies de sessão via document.cookie após qualquer refresh de token.
+            // Sem isso, o middleware escreve cookies httpOnly que o browser client
+            // não enxerga → INITIAL_SESSION = null → AuthSessionMissingError no F5.
+            supabaseResponse.cookies.set(name, value, { ...(options ?? {}), httpOnly: false })
           )
         },
       },

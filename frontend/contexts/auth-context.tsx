@@ -70,7 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Usuário autenticado mas sem registro na tabela usuarios:', session.user.id)
           setUser(null)
           setUsuario(null)
-          supabase.auth.signOut().catch(() => null)
+          // NÃO chamar supabase.auth.signOut() client-side — limpa os cookies via
+          // document.cookie e destrói a sessão. Redirecionar para signout server-side
+          // que revoga o token corretamente sem apagar cookies de forma parcial.
+          window.location.href = '/api/auth/signout'
         }
         return
       }
@@ -79,8 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('Usuário inativo:', usuarioData?.email)
         setUser(null)
         setUsuario(null)
-        supabase.auth.signOut().catch(() => null)
-        router.push('/login?error=inactive')
+        // Mesma razão: usar signout server-side para garantir revogação completa
+        window.location.href = '/api/auth/signout?error=inactive'
         return
       }
 
@@ -138,6 +141,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     // AbortError (timeout 3s) ou falha de rede — não bloquear
                   }
                   if (resynced) {
+                    // Remover flag ANTES do reload — se a sessão ainda não carregar
+                    // após o reload, uma nova tentativa de resync deve ser permitida.
+                    sessionStorage.removeItem('auth_resync_attempted')
                     window.location.reload()
                     return
                   }
