@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { type Session, type User } from '@supabase/supabase-js'
+import { type AuthChangeEvent, type Session, type User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { type Perfil } from '@/lib/constants/perfis'
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Ouvir eventos de sessão pós-inicialização.
     // INITIAL_SESSION é ignorado aqui — já tratado por init() acima.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session: Session | null) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         if (!active) return
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           await processSession(session)
