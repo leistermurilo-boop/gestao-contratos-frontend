@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { type AuthChangeEvent, type Session, type User } from '@supabase/supabase-js'
+import { type Session, type User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { type Perfil } from '@/lib/constants/perfis'
@@ -88,8 +88,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUsuario(usuarioData)
-      // Resync bem-sucedido: limpar flag para não bloquear tentativas futuras
-      sessionStorage.removeItem('auth_resync_attempted')
     } catch (err) {
       console.error('Erro inesperado em processSession:', err)
     } finally {
@@ -108,107 +106,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    let initialSessionHandled = false
+    // Flag para evitar atualizações de estado após unmount (StrictMode / navegação rápida)
+    let active = true
 
+    // Inicializar sessão diretamente via getSession() ao invés de aguardar INITIAL_SESSION.
+    //
+    // Problema: em @supabase/supabase-js@2.97.0, o evento INITIAL_SESSION pode disparar
+    // durante a inicialização interna do módulo, ANTES do useEffect montar e registrar o
+    // listener via onAuthStateChange. Quando isso ocorre, o INITIAL_SESSION nunca chega ao
+    // callback → processSession nunca é chamado → setLoading(false) nunca acontece →
+    // spinner eterno, sem nenhum request ativo no network.
+    //
+    // Solução: chamar getSession() diretamente no mount. getSession() lê os cookies de
+    // sessão via document.cookie (não-httpOnly graças ao fix do middleware) e retorna
+    // a sessão local instantaneamente, sem depender de eventos assíncronos do SDK.
+    // Se o access token estiver expirado, getSession() usa o refresh token automaticamente.
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!active) return
+        await processSession(session)
+      } catch (err) {
+        if (!active) return
+        console.error('Erro na inicialização da sessão:', err)
+        setLoading(false)
+      }
+    }
+
+    init()
+
+    // Ouvir eventos de sessão pós-inicialização.
+    // INITIAL_SESSION é ignorado aqui — já tratado por init() acima.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
-        if (event === 'INITIAL_SESSION') {
-          initialSessionHandled = true
-          if (!session) {
-            // Se session é null no INITIAL_SESSION, pode ser race condition de rotação
-            // concorrente de tokens (outro request rotacionou antes e invalidou este).
-            // Verificar com o servidor se ainda há sessão válida antes de deslogar.
-            // P3: try-catch obrigatório — se getUser() lançar exceção (timeout de rede,
-            // falha de DNS, etc.), processSession nunca seria chamado e loading ficaria
-            // true para sempre, causando spinner infinito.
-            try {
-              const { data: { user: serverUser }, error } = await supabase.auth.getUser()
-              if (error) {
-                // AuthSessionMissingError: browser client não tem tokens (ex: rotação de token
-                // consumiu refresh token de uso único em race condition de múltiplas requisições).
-                // Verificar com servidor se ainda há sessão válida antes de deslogar.
-                if (!sessionStorage.getItem('auth_resync_attempted')) {
-                  sessionStorage.setItem('auth_resync_attempted', '1')
-                  let resynced = false
-                  try {
-                    const controller = new AbortController()
-                    const timeoutId = setTimeout(() => controller.abort(), 3000)
-                    const res = await fetch('/api/auth/resync', {
-                      signal: controller.signal,
-                      // 'manual' evita seguir redirects — se o middleware redirecionar
-                      // para /login (sessão não reconhecida), o fetch retorna imediatamente
-                      // com res.type='opaqueredirect' em vez de ficar PENDING para sempre.
-                      redirect: 'manual',
-                    })
-                    clearTimeout(timeoutId)
-                    // res.type === 'opaqueredirect' significa que o middleware redirecionou
-                    // (sessão não encontrada) — tratar como resync falhou
-                    if (res.type !== 'opaqueredirect' && res.ok) {
-                      const { ok } = await res.json()
-                      if (ok) resynced = true
-                    }
-                  } catch {
-                    // AbortError (timeout 3s) ou falha de rede — não bloquear
-                  }
-                  if (resynced) {
-                    // Remover flag ANTES do reload — se a sessão ainda não carregar
-                    // após o reload, uma nova tentativa de resync deve ser permitida.
-                    sessionStorage.removeItem('auth_resync_attempted')
-                    window.location.reload()
-                    return
-                  }
-                  sessionStorage.removeItem('auth_resync_attempted')
-                }
-                // Sem sessão no servidor (ou segunda tentativa após resync) — encerrar loading.
-                console.error('Erro ao recuperar usuário no INITIAL_SESSION:', error)
-                setLoading(false)
-                return
-              }
-              if (serverUser) {
-                const { data: { session: freshSession } } = await supabase.auth.getSession()
-                await processSession(freshSession)
-                return
-              }
-            } catch (err) {
-              // Exceção capturada → garantir que loading não fica preso
-              console.error('Exceção ao recuperar sessão no INITIAL_SESSION:', err)
-              setLoading(false)
-              return
-            }
-          }
-          await processSession(session)
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      async (event, session: Session | null) => {
+        if (!active) return
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           await processSession(session)
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setUsuario(null)
           setLoading(false)
         }
+        // INITIAL_SESSION: ignorado (init() já fez getSession() no mount)
       }
     )
 
-    // Fallback: se INITIAL_SESSION não disparar em 1s, validar sessão com o servidor.
-    // IMPORTANTE: usar getUser() (valida com servidor), NÃO getSession() (lê cache local).
-    // getSession() pode retornar sessão com token expirado que ainda está no storage,
-    // causando redirecionamento indevido para /dashboard sem autenticação real.
-    const fallback = setTimeout(async () => {
-      if (!initialSessionHandled) {
-        const { data: { user: serverUser }, error } = await supabase.auth.getUser()
-        if (!error && serverUser) {
-          // Token válido no servidor — buscar sessão local para o processSession
-          const { data: { session } } = await supabase.auth.getSession()
-          await processSession(session)
-        } else {
-          // Sem sessão válida no servidor
-          setUser(null)
-          setUsuario(null)
-          setLoading(false)
-        }
-      }
-    }, 1000)
-
     return () => {
-      clearTimeout(fallback)
+      active = false
       subscription.unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
