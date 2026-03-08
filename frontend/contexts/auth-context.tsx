@@ -158,8 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Se retornar null — ignorar e aguardar INITIAL_SESSION (o cliente ainda
     // pode estar inicializando os cookies assincronamente).
     supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (session) initResolve(session)
+      .then(({ data }: { data: { session: Session | null } }) => {
+        if (data.session) initResolve(data.session)
       })
       .catch(() => { /* ignorar — INITIAL_SESSION cobrirá */ })
 
