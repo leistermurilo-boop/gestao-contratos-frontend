@@ -110,11 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Garante processamento único na inicialização — evita duplo processSession
     // se getSession() e INITIAL_SESSION chegarem próximos um do outro.
     let resolved = false
+    // Rastreia se setLoading(false) já foi chamado — usado pelo hard safety timeout
+    // para decidir se deve intervir sem depender do estado React (leitura async).
+    let loadingSettled = false
 
-    // Resolver a sessão inicial — chamado pelo primeiro caminho que obtiver um resultado.
+    // Resolver a sessão inicial — chamado pelo primeiro caminho que obtiver resultado.
     // Caminhos possíveis (em ordem de rapidez):
     //   A) getSession() retorna sessão válida (cookie em memória já inicializado)
-    //   B) INITIAL_SESSION dispara com sessão válida (inicialização async concluída)
+    //   B) INITIAL_SESSION dispara com sessão válida (init async do cliente concluída)
     //   C) SIGNED_IN / TOKEN_REFRESHED chega antes de INITIAL_SESSION (raro)
     //   D) Safety timeout 4s → getUser() como último recurso
     //
@@ -124,7 +127,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initResolve = async (session: Session | null) => {
       if (!active || resolved) return
       resolved = true
-      await processSession(session)
+      try {
+        await processSession(session)
+      } catch (err) {
+        // processSession tem try/catch/finally próprio — este catch é last-resort
+        // para erros síncronos inesperados antes do try interno (improvável mas possível).
+        console.error('Erro inesperado em initResolve:', err)
+        if (active) {
+          loadingSettled = true
+          setLoading(false)
+        }
+      }
+      // Marcar que o ciclo de loading foi concluído (setLoading(false) foi chamado
+      // pelo finally de processSession ou pelo catch acima).
+      loadingSettled = true
     }
 
     // Registrar onAuthStateChange PRIMEIRO — garante que INITIAL_SESSION
@@ -163,29 +179,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => { /* ignorar — INITIAL_SESSION cobrirá */ })
 
-    // Safety timeout: se nem getSession() nem INITIAL_SESSION resolverem em 4s,
-    // tentar getUser() (request ao servidor) como último recurso.
-    // Cobre edge cases: INITIAL_SESSION nunca disparou (bug do SDK) ou
-    // getSession() trava em refresh de token expirado.
+    // Safety timeout em dois estágios:
+    //
+    // Estágio 1 (4s): se resolved=false, nenhum caminho resolveu ainda →
+    //   tentar getUser() (request ao servidor) como último recurso.
+    //   Cobre: INITIAL_SESSION nunca disparou (bug do SDK) ou getSession() travado.
+    //
+    // Estágio 2 (8s): se resolved=true mas loadingSettled=false, initResolve
+    //   foi chamada mas processSession não completou (stalled ou erro silencioso) →
+    //   forçar setLoading(false) para desbloquear o spinner.
+    //   Cobre: resolved=true bloqueia todos os caminhos mas loading ainda está preso.
     const safetyTimeout = setTimeout(async () => {
-      if (!active || resolved) return
-      try {
-        const { data: { user: u } } = await supabase.auth.getUser()
-        if (!active || resolved) return
-        if (u) {
-          const { data: { session } } = await supabase.auth.getSession()
-          await initResolve(session ?? null)
-        } else {
-          await initResolve(null)
+      if (!active) return
+
+      if (!resolved) {
+        // Estágio 1: nenhum caminho resolveu — tentar servidor
+        try {
+          const { data: { user: u } } = await supabase.auth.getUser()
+          if (!active || resolved) return
+          if (u) {
+            const { data: { session } } = await supabase.auth.getSession()
+            await initResolve(session ?? null)
+          } else {
+            await initResolve(null)
+          }
+        } catch {
+          if (active && !resolved) await initResolve(null)
         }
-      } catch {
-        if (active && !resolved) await initResolve(null)
+      } else if (!loadingSettled) {
+        // Estágio 2: initResolve foi chamada mas loading ainda está preso
+        // (processSession stalled ou erro antes do finally) — forçar fim do spinner.
+        console.error('Auth safety: loading não resolveu em 8s após initResolve, forçando fim')
+        loadingSettled = true
+        setLoading(false)
       }
     }, 4000)
+
+    // Hard safety (8s): se depois de 4s + tempo de getUser() o loading ainda estiver
+    // preso com resolved=true, forçar fim definitivo.
+    const hardSafetyTimeout = setTimeout(() => {
+      if (!active || loadingSettled) return
+      console.error('Auth hard safety: forçando setLoading(false) após 8s')
+      loadingSettled = true
+      setLoading(false)
+    }, 8000)
 
     return () => {
       active = false
       clearTimeout(safetyTimeout)
+      clearTimeout(hardSafetyTimeout)
       subscription.unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
