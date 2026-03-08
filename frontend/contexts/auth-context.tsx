@@ -133,10 +133,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   try {
                     const controller = new AbortController()
                     const timeoutId = setTimeout(() => controller.abort(), 3000)
-                    const res = await fetch('/api/auth/resync', { signal: controller.signal })
+                    const res = await fetch('/api/auth/resync', {
+                      signal: controller.signal,
+                      // 'manual' evita seguir redirects — se o middleware redirecionar
+                      // para /login (sessão não reconhecida), o fetch retorna imediatamente
+                      // com res.type='opaqueredirect' em vez de ficar PENDING para sempre.
+                      redirect: 'manual',
+                    })
                     clearTimeout(timeoutId)
-                    const { ok } = await res.json()
-                    if (ok) resynced = true
+                    // res.type === 'opaqueredirect' significa que o middleware redirecionou
+                    // (sessão não encontrada) — tratar como resync falhou
+                    if (res.type !== 'opaqueredirect' && res.ok) {
+                      const { ok } = await res.json()
+                      if (ok) resynced = true
+                    }
                   } catch {
                     // AbortError (timeout 3s) ou falha de rede — não bloquear
                   }

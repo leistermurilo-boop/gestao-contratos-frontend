@@ -56,7 +56,10 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/cadastro') ||
     pathname.startsWith('/register') ||
     pathname.startsWith('/recuperar-senha') ||
-    pathname.startsWith('/callback')
+    pathname.startsWith('/callback') ||
+    // Rotas de auth internas — nunca redirecionar para /login (causaria loop:
+    // fetch('/api/auth/resync') no client seguiria o redirect e ficaria PENDING)
+    pathname.startsWith('/api/auth/')
 
   // Usuário autenticado tentando acessar /login → redireciona para dashboard
   if (pathname.startsWith('/login') && user) {
