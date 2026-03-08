@@ -106,53 +106,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    // Flag para evitar atualizações de estado após unmount (StrictMode / navegação rápida)
     let active = true
+    // Garante processamento único na inicialização — evita duplo processSession
+    // se getSession() e INITIAL_SESSION chegarem próximos um do outro.
+    let resolved = false
 
-    // Inicializar sessão diretamente via getSession() ao invés de aguardar INITIAL_SESSION.
+    // Resolver a sessão inicial — chamado pelo primeiro caminho que obtiver um resultado.
+    // Caminhos possíveis (em ordem de rapidez):
+    //   A) getSession() retorna sessão válida (cookie em memória já inicializado)
+    //   B) INITIAL_SESSION dispara com sessão válida (inicialização async concluída)
+    //   C) SIGNED_IN / TOKEN_REFRESHED chega antes de INITIAL_SESSION (raro)
+    //   D) Safety timeout 4s → getUser() como último recurso
     //
-    // Problema: em @supabase/supabase-js@2.97.0, o evento INITIAL_SESSION pode disparar
-    // durante a inicialização interna do módulo, ANTES do useEffect montar e registrar o
-    // listener via onAuthStateChange. Quando isso ocorre, o INITIAL_SESSION nunca chega ao
-    // callback → processSession nunca é chamado → setLoading(false) nunca acontece →
-    // spinner eterno, sem nenhum request ativo no network.
-    //
-    // Solução: chamar getSession() diretamente no mount. getSession() lê os cookies de
-    // sessão via document.cookie (não-httpOnly graças ao fix do middleware) e retorna
-    // a sessão local instantaneamente, sem depender de eventos assíncronos do SDK.
-    // Se o access token estiver expirado, getSession() usa o refresh token automaticamente.
-    const init = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!active) return
-        await processSession(session)
-      } catch (err) {
-        if (!active) return
-        console.error('Erro na inicialização da sessão:', err)
-        setLoading(false)
-      }
+    // Se getSession() retornar null, NÃO resolvemos — aguardamos INITIAL_SESSION que
+    // pode ter a sessão quando a init async do createBrowserClient terminar.
+    // INITIAL_SESSION resolve com null apenas se o browser client confirmar sem sessão.
+    const initResolve = async (session: Session | null) => {
+      if (!active || resolved) return
+      resolved = true
+      await processSession(session)
     }
 
-    init()
-
-    // Ouvir eventos de sessão pós-inicialização.
-    // INITIAL_SESSION é ignorado aqui — já tratado por init() acima.
+    // Registrar onAuthStateChange PRIMEIRO — garante que INITIAL_SESSION
+    // não seja disparado antes do listener existir.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         if (!active) return
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          await processSession(session)
+        if (event === 'INITIAL_SESSION') {
+          // INITIAL_SESSION é a fonte de verdade para a sessão inicial.
+          // Chega depois da init async do createBrowserClient terminar de ler os cookies.
+          await initResolve(session)
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (!resolved) {
+            // SIGNED_IN chegou antes de INITIAL_SESSION (ex: login simultâneo)
+            await initResolve(session)
+          } else {
+            // Pós-inicialização: sessão atualizada (ex: refresh de token)
+            await processSession(session)
+          }
         } else if (event === 'SIGNED_OUT') {
+          resolved = true
           setUser(null)
           setUsuario(null)
           setLoading(false)
         }
-        // INITIAL_SESSION: ignorado (init() já fez getSession() no mount)
       }
     )
 
+    // Fast path: se o createBrowserClient já tiver a sessão em memória
+    // (comum na 1ª carga), getSession() retorna antes de INITIAL_SESSION.
+    // Se retornar null — ignorar e aguardar INITIAL_SESSION (o cliente ainda
+    // pode estar inicializando os cookies assincronamente).
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session) initResolve(session)
+      })
+      .catch(() => { /* ignorar — INITIAL_SESSION cobrirá */ })
+
+    // Safety timeout: se nem getSession() nem INITIAL_SESSION resolverem em 4s,
+    // tentar getUser() (request ao servidor) como último recurso.
+    // Cobre edge cases: INITIAL_SESSION nunca disparou (bug do SDK) ou
+    // getSession() trava em refresh de token expirado.
+    const safetyTimeout = setTimeout(async () => {
+      if (!active || resolved) return
+      try {
+        const { data: { user: u } } = await supabase.auth.getUser()
+        if (!active || resolved) return
+        if (u) {
+          const { data: { session } } = await supabase.auth.getSession()
+          await initResolve(session ?? null)
+        } else {
+          await initResolve(null)
+        }
+      } catch {
+        if (active && !resolved) await initResolve(null)
+      }
+    }, 4000)
+
     return () => {
       active = false
+      clearTimeout(safetyTimeout)
       subscription.unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
