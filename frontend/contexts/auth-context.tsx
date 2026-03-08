@@ -125,18 +125,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // consumiu refresh token de uso único em race condition de múltiplas requisições).
                 // Verificar com servidor se ainda há sessão válida antes de deslogar.
                 if (!sessionStorage.getItem('auth_resync_attempted')) {
+                  sessionStorage.setItem('auth_resync_attempted', '1')
+                  let resynced = false
                   try {
-                    sessionStorage.setItem('auth_resync_attempted', '1')
-                    const res = await fetch('/api/auth/resync')
+                    const controller = new AbortController()
+                    const timeoutId = setTimeout(() => controller.abort(), 3000)
+                    const res = await fetch('/api/auth/resync', { signal: controller.signal })
+                    clearTimeout(timeoutId)
                     const { ok } = await res.json()
-                    if (ok) {
-                      // Servidor reescreveu cookies legíveis — recarregar para browser
-                      // client inicializar com tokens frescos no próximo INITIAL_SESSION.
-                      window.location.reload()
-                      return
-                    }
+                    if (ok) resynced = true
                   } catch {
-                    // Resync falhou (rede) — prosseguir para setLoading(false)
+                    // AbortError (timeout 3s) ou falha de rede — não bloquear
+                  }
+                  if (resynced) {
+                    window.location.reload()
+                    return
                   }
                   sessionStorage.removeItem('auth_resync_attempted')
                 }
