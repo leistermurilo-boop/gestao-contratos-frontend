@@ -23,13 +23,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       // signIn() pode retornar antes de processSession completar, causando
       // janela breve de user=null. 2000ms garante que auth estabilize primeiro.
       //
-      // IMPORTANTE: usar /api/auth/signout em vez de router.push('/login').
-      // router.push('/login') causa loop: middleware server-side ainda vê sessão
-      // válida (cookies httpOnly) e redireciona de volta para /dashboard indefinidamente.
-      // /api/auth/signout limpa TODOS os cookies (inclusive httpOnly) antes de ir
-      // para /login, garantindo que o middleware não bloqueie o login.
+      // IMPORTANTE: usar router.push('/login') — NÃO chamar /api/auth/signout aqui.
+      // /api/auth/signout revoga o refresh token globalmente via scope:'global'.
+      // Se o browser client falhou ao ler cookies (ex: durante resync após F5),
+      // o servidor ainda tem a sessão válida. Chamar signout DESTROI essa sessão,
+      // causando ZERO cookies na próxima tentativa.
+      // Com middleware usando httpOnly:false, os cookies são sempre legíveis pelo
+      // browser client após qualquer refresh, eliminando o risco de loop.
       redirectTimerRef.current = setTimeout(() => {
-        window.location.href = '/api/auth/signout'
+        router.push('/login')
       }, 2000)
     }
 
