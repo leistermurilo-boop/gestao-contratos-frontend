@@ -22,8 +22,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       // Timer evita redirect prematuro durante race condition pós-login:
       // signIn() pode retornar antes de processSession completar, causando
       // janela breve de user=null. 2000ms garante que auth estabilize primeiro.
+      //
+      // IMPORTANTE: usar /api/auth/signout em vez de router.push('/login').
+      // router.push('/login') causa loop: middleware server-side ainda vê sessão
+      // válida (cookies httpOnly) e redireciona de volta para /dashboard indefinidamente.
+      // /api/auth/signout limpa TODOS os cookies (inclusive httpOnly) antes de ir
+      // para /login, garantindo que o middleware não bloqueie o login.
       redirectTimerRef.current = setTimeout(() => {
-        router.push('/login')
+        window.location.href = '/api/auth/signout'
       }, 2000)
     }
 
