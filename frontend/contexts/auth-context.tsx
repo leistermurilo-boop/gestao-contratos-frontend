@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { type Session, type User } from '@supabase/supabase-js'
+import { type AuthChangeEvent, type Session, type User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { type Perfil } from '@/lib/constants/perfis'
@@ -108,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let initialSessionHandled = false
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         if (event === 'INITIAL_SESSION') {
           initialSessionHandled = true
           if (!session) {

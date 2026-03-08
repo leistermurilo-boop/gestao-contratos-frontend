@@ -55,7 +55,7 @@ export class DashboardService {
 
     if (error) throw new Error(error.message)
 
-    const valorTotal = (data ?? []).reduce((acc, c) => acc + (c.valor_total ?? 0), 0)
+    const valorTotal = (data ?? []).reduce((acc: number, c: { valor_total: number | null }) => acc + (c.valor_total ?? 0), 0)
     return { total: count ?? 0, valorTotal }
   }
 
@@ -75,8 +75,8 @@ export class DashboardService {
 
     if (!data || data.length === 0) return { margemMedia: null }
 
-    const margens = data.map((i) => i.margem_atual as number)
-    const margemMedia = margens.reduce((acc, m) => acc + m, 0) / margens.length
+    const margens = data.map((i: { margem_atual: number | null }) => i.margem_atual as number)
+    const margemMedia = margens.reduce((acc: number, m: number) => acc + m, 0) / margens.length
     return { margemMedia }
   }
 
