@@ -91,14 +91,13 @@ export class ItensService {
    * Usa .select('id') para detectar falha silenciosa por RLS (0 rows = sem permissão).
    */
   async softDelete(id: string): Promise<void> {
-    const { data, error } = await this.supabase
+    const { error, count } = await this.supabase
       .from('itens_contrato')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: new Date().toISOString() }, { count: 'exact' })
       .eq('id', id)
-      .select('id')
 
     if (error) throw new Error(error.message)
-    if (!data || data.length === 0) {
+    if (count === 0) {
       throw new Error('Item não encontrado ou sem permissão para remover.')
     }
   }

@@ -135,17 +135,16 @@ export class ContratosService {
    * Usa .select('id') para detectar falha silenciosa por RLS (0 rows = sem permissão).
    */
   async softDelete(id: string, userId: string): Promise<void> {
-    const { data, error } = await this.supabase
+    const { error, count } = await this.supabase
       .from('contratos')
       .update({
         deleted_at: new Date().toISOString(),
         deleted_by: userId,
-      })
+      }, { count: 'exact' })
       .eq('id', id)
-      .select('id')
 
     if (error) throw new Error(error.message)
-    if (!data || data.length === 0) {
+    if (count === 0) {
       throw new Error('Contrato não encontrado ou sem permissão para arquivar.')
     }
   }
