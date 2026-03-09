@@ -130,19 +130,24 @@ export class ContratosService {
   }
 
   /**
-   * Soft delete — marca deleted_at.
+   * Soft delete — marca deleted_at e deleted_by.
    * ⚠️ NUNCA usar hard delete (Decisão #5)
+   * Usa .select('id') para detectar falha silenciosa por RLS (0 rows = sem permissão).
    */
   async softDelete(id: string, userId: string): Promise<void> {
-    const { error } = await this.supabase
+    const { data, error } = await this.supabase
       .from('contratos')
       .update({
         deleted_at: new Date().toISOString(),
         deleted_by: userId,
       })
       .eq('id', id)
+      .select('id')
 
     if (error) throw new Error(error.message)
+    if (!data || data.length === 0) {
+      throw new Error('Contrato não encontrado ou sem permissão para arquivar.')
+    }
   }
 
   /**
