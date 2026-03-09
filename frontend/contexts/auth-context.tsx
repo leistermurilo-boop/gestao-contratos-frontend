@@ -6,6 +6,10 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { type Perfil } from '@/lib/constants/perfis'
 
+// Timeout em ms para a query de usuarios no processSession.
+// Evita hang em cold start (primeira conexão TCP com Supabase Edge pode demorar 3-5s).
+const USUARIOS_QUERY_TIMEOUT_MS = 3000
+
 interface Usuario {
   id: string
   empresa_id: string
@@ -57,11 +61,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(session.user)
 
-      const { data: usuarioData, error } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
+      // Timeout para prevenir hang em cold start (nova aba sem conexão warm).
+      // Se ultrapassar: catch trata graciosamente (usuario fica null temporariamente),
+      // o retry useEffect abaixo recarrega o usuario assim que a conexão esquentar.
+      const { data: usuarioData, error } = await Promise.race([
+        supabase.from('usuarios').select('*').eq('id', session.user.id).single(),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`timeout:${USUARIOS_QUERY_TIMEOUT_MS}ms`)),
+            USUARIOS_QUERY_TIMEOUT_MS
+          )
+        ),
+      ])
 
       if (error) {
         // PGRST116 = nenhuma linha encontrada → usuário não existe na tabela
@@ -89,7 +100,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUsuario(usuarioData)
     } catch (err) {
-      console.error('Erro inesperado em processSession:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.startsWith('timeout:')) {
+        // Cold start: query de usuarios demorou >3s. user permanece definido (setUser
+        // já foi chamado). O retry useEffect vai recarregar usuario em ~2s.
+        console.warn('processSession: cold start timeout na query usuarios — retry em breve')
+      } else {
+        console.error('Erro inesperado em processSession:', err)
+      }
     } finally {
       processingRef.current = false
       setLoading(false)
@@ -209,7 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (!loadingSettled) {
         // Estágio 2: initResolve foi chamada mas loading ainda está preso
         // (processSession stalled ou erro antes do finally) — forçar fim do spinner.
-        console.error('Auth safety: loading não resolveu em 8s após initResolve, forçando fim')
+        console.error('Auth safety: loading não resolveu em 4s após initResolve, forçando fim')
         loadingSettled = true
         setLoading(false)
       }
@@ -232,6 +250,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Retry de usuario: dispara quando user está definido mas usuario não (cold start timeout).
+  // A query de usuarios falhou por timeout no processSession — aguarda 2s (conexão esquenta)
+  // e tenta novamente. Não dispara no fluxo normal (usuario é setado dentro do processSession).
+  useEffect(() => {
+    if (!user || usuario || loading) return
+    const retryId = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        if (error || !data?.ativo) return
+        setUsuario(data)
+      } catch {
+        // Silencioso — próximo evento de auth vai resolver
+      }
+    }, 2000)
+    return () => clearTimeout(retryId)
+  }, [user, usuario, loading, supabase])
 
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
