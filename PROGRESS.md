@@ -1,7 +1,58 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-03-09 (última atualização)
-**Sessão:** Fix definitivo de auth — F5 + LockManager + spinner eterno
+**Data:** 2026-03-10 (última atualização)
+**Sessão:** Cold start auth fix + Soft delete fix (aguardando teste)
+
+---
+
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 10/03/2026)
+
+### 🔐 Fix Cold Start — Aba nova travada no skeleton
+
+**Sintoma:** Abrir aba nova e navegar direto para /dashboard ficava travado em skeleton por ~4s. Log: "Auth safety: loading não resolveu em 8s após initResolve, forçando fim" (timer era 4s, mensagem enganosa).
+
+**Causa raiz:** `processSession` aguardava a query `usuarios` sem timeout. Cold start (1ª conexão TCP ao Supabase Edge) pode levar 3-5s. O safety timer de 4s disparava antes da query concluir, liberando loading com `usuario=null`.
+
+**Fixes aplicados (`commit 046349f`):**
+1. `Promise.race` com 3s timeout na query `usuarios` dentro de `processSession`
+2. Retry `useEffect`: se `user` setado + `usuario=null` após loading → retry em 2s (conexão já warm)
+3. Fix mensagem de log: "8s" → "4s" (o safetyTimeout real é 4000ms)
+
+**Arquivo:** `frontend/contexts/auth-context.tsx`
+
+---
+
+### 🗑️ Fix Soft Delete — 403 Forbidden
+
+**Sintoma:** Arquivar contrato ou remover item retornava 403 Forbidden.
+
+**Causa raiz (dupla):**
+
+1. **Conflito de políticas RLS** — Migration 018 tentou `CREATE POLICY` sem `DROP IF EXISTS` dos nomes já existentes da Migration 007 (`contratos_update`, `itens_update`). A 007 tinha `USING (deleted_at IS NULL)` no UPDATE, que em alguns edge cases bloqueava o soft delete.
+
+2. **403 após adicionar `.select('id')`** — PostgREST ao fazer `UPDATE + select=id` tenta fazer `RETURNING`, que bate na SELECT policy `deleted_at IS NULL` depois do soft delete setar `deleted_at`. Resultado: 403 Forbidden.
+
+**Fixes aplicados:**
+
+`commit 3bbf715` — Migration 020 + detecção de falha silenciosa:
+- `database/migrations/MIGRATION 020.sql` — DROP IF EXISTS de todos os nomes possíveis (007/018/019) + recriação limpa das políticas UPDATE sem `deleted_at` no USING
+- `contratos.service.ts` + `itens.service.ts`: `.select('id')` para detectar 0 rows
+
+`commit 7166e3f` — Fix do 403:
+- Substituído `.select('id')` por `{ count: 'exact' }` no `.update()`
+- `count: 'exact'` usa `Prefer: return=minimal` — conta rows sem RETURNING → não bate na SELECT policy
+
+**⚠️ AÇÃO PENDENTE:** Aplicar `MIGRATION 020.sql` no Supabase SQL Editor (projeto `hstlbkudwnboebmarilp`).
+
+---
+
+## ⚠️ PENDÊNCIAS PARA PRÓXIMA SESSÃO
+
+1. **Aplicar Migration 020** no Supabase SQL Editor (se ainda não feito)
+2. **Testar soft delete de contrato** — botão Arquivar → contrato some da lista ✅?
+3. **Testar soft delete de item** — remover item → item some da lista ✅?
+4. **Testar fluxo OCR completo** em produção
+5. **Executar matriz de permissões** (`docs/tests/matriz-permissoes.md`) com 5 perfis
 
 ---
 
