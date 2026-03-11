@@ -86,20 +86,16 @@ export class ItensService {
   }
 
   /**
-   * Soft delete — marca deleted_at.
+   * Soft delete — usa RPC com SECURITY DEFINER para contornar o comportamento do
+   * PostgREST que aplica SELECT policy como verificação pós-UPDATE (causa 403 quando
+   * deleted_at passa de NULL para timestamp, pois a linha some da SELECT policy).
    * ⚠️ NUNCA hard delete (Decisão #5)
-   * Usa .select('id') para detectar falha silenciosa por RLS (0 rows = sem permissão).
    */
   async softDelete(id: string): Promise<void> {
-    const { error, count } = await this.supabase
-      .from('itens_contrato')
-      .update({ deleted_at: new Date().toISOString() }, { count: 'exact' })
-      .eq('id', id)
+    const { error } = await this.supabase
+      .rpc('soft_delete_item_contrato', { p_id: id })
 
     if (error) throw new Error(error.message)
-    if (count === 0) {
-      throw new Error('Item não encontrado ou sem permissão para remover.')
-    }
   }
 
   /**

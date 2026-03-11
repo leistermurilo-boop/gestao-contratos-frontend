@@ -130,23 +130,16 @@ export class ContratosService {
   }
 
   /**
-   * Soft delete — marca deleted_at e deleted_by.
+   * Soft delete — usa RPC com SECURITY DEFINER para contornar o comportamento do
+   * PostgREST que aplica SELECT policy como verificação pós-UPDATE (causa 403 quando
+   * deleted_at passa de NULL para timestamp, pois a linha some da SELECT policy).
    * ⚠️ NUNCA usar hard delete (Decisão #5)
-   * Usa .select('id') para detectar falha silenciosa por RLS (0 rows = sem permissão).
    */
   async softDelete(id: string, userId: string): Promise<void> {
-    const { error, count } = await this.supabase
-      .from('contratos')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: userId,
-      }, { count: 'exact' })
-      .eq('id', id)
+    const { error } = await this.supabase
+      .rpc('soft_delete_contrato', { p_id: id, p_user_id: userId })
 
     if (error) throw new Error(error.message)
-    if (count === 0) {
-      throw new Error('Contrato não encontrado ou sem permissão para arquivar.')
-    }
   }
 
   /**

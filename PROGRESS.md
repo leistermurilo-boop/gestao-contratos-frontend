@@ -1,7 +1,38 @@
 # PROGRESS.md - Estado do Projeto
 
-**Data:** 2026-03-10 (última atualização)
-**Sessão:** Cold start auth fix + Soft delete fix (aguardando teste)
+**Data:** 2026-03-11 (última atualização)
+**Sessão:** Soft delete fix definitivo via RPC SECURITY DEFINER
+
+---
+
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 11/03/2026)
+
+### 🗑️ Fix Soft Delete Definitivo — RPC SECURITY DEFINER
+
+**Diagnóstico preciso identificado via testes cirúrgicos:**
+
+| Teste | Status | Conclusão |
+|-------|--------|-----------|
+| PATCH `objeto` = mesmo valor | 204 ✅ | UPDATE funciona |
+| PATCH `deleted_at = null` | 204 ✅ | Setar null funciona |
+| PATCH `deleted_at = timestamp` | 403 ❌ | Só falha com timestamp |
+
+**Causa raiz:** Comportamento documentado do PostgREST — após qualquer UPDATE, verifica se
+a linha resultante é "visível" pela SELECT policy. Após soft delete:
+- `deleted_at` muda de NULL → timestamp
+- PostgREST verifica `contratos_select` que exige `deleted_at IS NULL`
+- Linha não passa → 403 Forbidden
+
+Isso é independente do UPDATE policy. Nenhuma mudança nas políticas RLS resolve.
+Migration 020 + fix `count:exact` eram necessários mas insuficientes.
+
+**Solução (Migration 021 + services atualizados):**
+- `soft_delete_contrato(p_id, p_user_id)` — SECURITY DEFINER, valida `empresa_id` internamente
+- `soft_delete_item_contrato(p_id)` — SECURITY DEFINER, valida via `contratos.empresa_id`
+- Ambas com `REVOKE ... FROM PUBLIC` + `GRANT ... TO authenticated`
+- Services migrados de `.update()` direto para `.rpc()`
+
+**⚠️ AÇÃO PENDENTE:** Aplicar `MIGRATION 021.sql` no Supabase SQL Editor.
 
 ---
 
@@ -48,7 +79,7 @@
 
 ## ⚠️ PENDÊNCIAS PARA PRÓXIMA SESSÃO
 
-1. **Aplicar Migration 020** no Supabase SQL Editor (se ainda não feito)
+1. **Aplicar Migration 021** no Supabase SQL Editor (projeto `hstlbkudwnboebmarilp`) — funções RPC soft delete
 2. **Testar soft delete de contrato** — botão Arquivar → contrato some da lista ✅?
 3. **Testar soft delete de item** — remover item → item some da lista ✅?
 4. **Testar fluxo OCR completo** em produção
