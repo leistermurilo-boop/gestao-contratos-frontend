@@ -8,44 +8,38 @@
 ## Estado Atual
 
 ```
-Status: DONE
+Status: IDLE
 ```
-
-**Status possíveis:**
-- `IDLE` — nenhum relatório pendente
-- `READY` — Cowork terminou, aguardando análise
-- `IN_PROGRESS` — @analyst processando
-- `DONE` — ciclo completo, aguardando próximo teste
 
 ---
 
-## Último Report
+## Ultimo Report
 
-**Data:** 2026-03-12 
-**Sessão de Teste:** teste resend email — endpoint /api/test-resend retorna 404 em produção
-**Relatório:** ai-loop/reports/browser-report.md
-**Urgência:** alta
-**Notas do Cowork:** Rota existe no repo (commit 2026-03-11) mas retorna 404 em produção. Duas hipóteses: (1) middleware não lista /api/test-resend como rota pública; (2) RESEND_API_KEY ausente no Vercel causando falha de build silenciosa. Ver browser-report.md para diagnóstico completo.
+**Data:** 2026-03-12
+**Sessao de Teste:** Loop 1 completo — Resend funcionando em producao
+**Relatorio:** ai-loop/reports/browser-report.md
+**Urgencia:** normal
+**Resultado:** RESOLVIDO — success:true, email enviado ID 00aa5229-6b42-4317-83c7-c5d7968022d3
+
+**Ciclo completo loop 1:**
+- Cowork: diagnosticou 404 em /api/test-resend
+- Causa raiz: RESEND_API_KEY ausente no Vercel + middleware nao listava a rota
+- Terminal: fix no middleware (commit 48f1276)
+- Usuario: adicionou RESEND_API_KEY no Vercel
+- Redeploy: Ready (EuoNHkKkq)
+- Cowork re-testou: success:true, Email sent successfully
 
 ---
 
 ## Como usar
 
-### Cowork — escreve aqui quando termina os testes:
-```
+### Cowork escreve aqui quando termina os testes:
 Status: READY
-Data: YYYY-MM-DD HH:MM
-Sessão de Teste: [breve descrição — ex: "teste resend email + soft delete"]
-Relatório: ai-loop/reports/browser-report.md
-Urgência: normal
-Notas do Cowork: [qualquer contexto extra]
-```
+Data: YYYY-MM-DD
+Sessao de Teste: descricao
+Relatorio: ai-loop/reports/browser-report.md
+Urgencia: normal|alta|critica
+Notas: contexto extra
 
-### Terminal — detecta READY e inicia ciclo de agentes:
-```bash
-# Manual:
+### Terminal detecta READY e inicia ciclo:
 /analyze-inbox
-
-# Automático (monitora a cada 1 min):
-/loop 1m /analyze-inbox
-```
