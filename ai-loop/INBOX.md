@@ -8,7 +8,7 @@
 ## Estado Atual
 
 ```
-Status: IDLE
+Status: READY
 ```
 
 **Status possíveis:**
@@ -21,17 +21,17 @@ Status: IDLE
 
 ## Último Report
 
-**Data:** —
-**Sessão de Teste:** —
+**Data:** 2026-03-12 
+**Sessão de Teste:** teste resend email — endpoint /api/test-resend retorna 404 em produção
 **Relatório:** ai-loop/reports/browser-report.md
-**Urgência:** normal | alta | crítica
-**Notas do Cowork:** —
+**Urgência:** alta
+**Notas do Cowork:** Rota existe no repo (commit 2026-03-11) mas retorna 404 em produção. Duas hipóteses: (1) middleware não lista /api/test-resend como rota pública; (2) RESEND_API_KEY ausente no Vercel causando falha de build silenciosa. Ver browser-report.md para diagnóstico completo.
 
 ---
 
 ## Como usar
 
-### Cowork → escreve aqui quando termina os testes:
+### Cowork — escreve aqui quando termina os testes:
 ```
 Status: READY
 Data: YYYY-MM-DD HH:MM
@@ -41,19 +41,11 @@ Urgência: normal
 Notas do Cowork: [qualquer contexto extra]
 ```
 
-### Terminal → detecta READY e inicia ciclo de agentes:
+### Terminal — detecta READY e inicia ciclo de agentes:
 ```bash
 # Manual:
 /analyze-inbox
 
-# Automático (monitoramento contínuo):
+# Automático (monitora a cada 1 min):
 /loop 1m /analyze-inbox
 ```
-
----
-
-## Histórico
-
-| Data | Sessão | Status Final | Agentes Ativados |
-|------|--------|-------------|-----------------|
-| — | — | — | — |
