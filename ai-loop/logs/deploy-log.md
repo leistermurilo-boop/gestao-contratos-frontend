@@ -18,6 +18,12 @@
 
 ## Histórico
 
+### [2026-03-12] 42f57e5 — fix(data-collector): 3 bugs [Loop #2]
+- Trigger: push para main
+- Status: ✅ sucesso — validado pelo Cowork
+- Arquivos: data-collector-agent.ts, route.ts, middleware.ts
+- Notas: browser client → server client injetado; error handler; 401 JSON para /api/
+
 ### [2026-03-12] — fix(middleware): liberar /api/test-resend como rota pública
 - Trigger: push para main (ciclo Cowork loop #1)
 - Status: ⏳ em andamento

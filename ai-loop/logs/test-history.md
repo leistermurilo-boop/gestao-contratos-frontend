@@ -17,6 +17,15 @@
 
 ## Histórico
 
+### [2026-03-12] — Sprint 4A Data Collector Agent (Cowork loop #2)
+| Cenário | Perfil | Resultado | Notas |
+|---------|--------|-----------|-------|
+| POST autenticado → 200 | admin | ✅ | 4 contratos, 7 itens, 7 insights, 14s |
+| empresa_intelligence populada | admin | ✅ | insert confirmado via resposta |
+| Campos JSON válidos | — | ✅ | portfolio_materiais, padroes_renovacao, sazonalidade, orgaos_frequentes |
+| confianca_score 0-1 | — | ✅ | 11 pontos → 0.50 |
+| POST sem auth → 401 | — | ✅ | {"error":"Não autenticado"} |
+
 ### [2026-03-12] — Resend email endpoint (Cowork loop #1)
 | Cenário | Perfil | Resultado | Notas |
 |---------|--------|-----------|-------|
