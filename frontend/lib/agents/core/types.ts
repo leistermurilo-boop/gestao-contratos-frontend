@@ -121,6 +121,52 @@ export interface InsightEducacional {
   }
 }
 
+// ============================================
+// DATA COLLECTOR AGENT TYPES (Sprint 4A)
+// ============================================
+
+export interface DataCollectorInput {
+  empresa_id: string
+  periodo_meses?: number // Default: 12
+}
+
+export interface DataCollectorOutput {
+  success: boolean
+  empresa_id: string
+  total_contratos: number
+  total_itens: number
+  insights_gerados: number
+  tempo_processamento_ms: number
+  error?: string
+}
+
+export interface EmpresaIntelligence {
+  id: string
+  empresa_id: string
+  analise_data: string
+  periodo_inicio: string
+  periodo_fim: string
+  total_contratos_analisados: number
+  portfolio_materiais?: unknown
+  padroes_renovacao?: unknown
+  sazonalidade?: unknown
+  orgaos_frequentes?: unknown
+  esferas_atuacao?: unknown
+  ticket_medio?: number
+  margem_media_historica?: number
+  valor_total_portfolio?: number
+  evolucao_portfolio?: unknown
+  confianca_score: number
+  total_pontos_dados: number
+  insights_validados: number
+  insights_totais: number
+  taxa_acerto?: number
+  versao_agent: string
+  tempo_processamento_ms?: number
+  created_at: string
+  updated_at: string
+}
+
 export interface NewsletterHTML {
   subject: string
   preview_text: string
