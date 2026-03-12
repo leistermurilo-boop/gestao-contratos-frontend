@@ -1,101 +1,149 @@
 # Browser Report — Cowork QA Session
 
-**Data:** 2026-03-12 
-**Sessão:** Teste integração Resend Email — produção
+**Data:** 2026-03-12
+**Sessao:** Sprint 4A — Data Collector Agent
 
 ---
 
 ## Environment
 
 - **Environment:** Production
-- **URL Tested:** https://app.duogovernance.com.br/api/test-resend
-- **Browser:** Chrome (via Cowork automation)
-- **Auth State:** Não autenticado (acesso direto à rota de API)
+- **URL Tested:** https://app.duogovernance.com.br/api/agents/data-collector
+- **Method:** POST
+- **Auth State:** Autenticado como Admin (Murilo Leister / MGL Gestao)
 
 ---
 
 ## Test Scenario
 
-Validar se o endpoint `GET /api/test-resend` está funcional em produção,
-enviando email de teste via Resend para leistermurilo@gmail.com.
+Validar o endpoint POST /api/agents/data-collector (Sprint 4A):
+1. Retorna 200 + JSON success:true com auth
+2. Popula tabela empresa_intelligence
+3. Campos JSON validos (portfolio_materiais, padroes_renovacao, sazonalidade, orgaos_frequentes)
+4. confianca_score calculado (0-1)
+5. Retorna 401 sem autenticacao
 
 ---
 
 ## Steps Performed
 
-1. Navegado para `https://app.duogovernance.com.br/api/test-resend`
-2. Aguardado resposta JSON
-3. Capturado status HTTP e conteúdo da resposta
-4. Verificado estrutura do repo e middleware
+1. Login como Admin no dashboard
+2. Executado: fetch('/api/agents/data-collector', { method: 'POST' }) com cookies de sessao
+3. Aguardado resposta (timeout 10s)
+4. Testado sem auth: fetch com credentials:'omit'
+5. Inspecionado codigo fonte do agente via GitHub API
 
 ---
 
 ## Expected Result
 
-Resposta JSON `{ success: true, messageId: "..." }` com status 200.
-Email enviado para leistermurilo@gmail.com via domínio duogovernance.com.br.
+HTTP 200 + JSON:
+{
+  "success": true,
+  "message": "Analise concluida com sucesso",
+  "data": {
+    "total_contratos": N,
+    "total_itens": N,
+    "insights_gerados": N,
+    "tempo_processamento_ms": N
+  }
+}
 
 ---
 
 ## Actual Result
 
-**HTTP 404 — "This page could not be found."**
+### Cenario 1 — POST autenticado
+- HTTP 500
+- Body: {"error":"Erro desconhecido"}
+- Tempo: 7724ms (7.7s)
+- FALHOU
 
-A rota não foi encontrada em produção, apesar de existir no repositório.
+### Cenario 2/3/4 — tabela empresa_intelligence, campos JSON, confianca_score
+- NAO VERIFICAVEL — endpoint retornou 500 antes de concluir operacao
+- FALHOU (bloqueado pelo 500)
+
+### Cenario 5 — sem autenticacao (credentials:omit)
+- HTTP 405 Method Not Allowed (body vazio)
+- ATENCAO: esperado 401, recebeu 405
+- Possivelmente o middleware redirecionou para /login que nao aceita POST
 
 ---
 
 ## Console Errors
 
-Nenhum erro de console capturado (404 retornado pela própria Next.js).
+Nenhum erro de console client-side capturado.
+O erro ocorre server-side (Vercel function).
 
 ---
 
 ## Network Errors
 
-```
-GET https://app.duogovernance.com.br/api/test-resend
-Status: 404 Not Found
-Response: Next.js 404 page (HTML)
-```
+POST /api/agents/data-collector -> 500 {"error":"Erro desconhecido"} em 7724ms
 
 ---
 
 ## Database Errors
 
-Nenhum — problema é na camada de roteamento/deploy, não no banco.
+Nao verificavel a partir do browser.
+Supabase errors provaveis — ver Root Cause abaixo.
 
 ---
 
 ## Root Cause Hypothesis
 
-Duas hipóteses, em ordem de probabilidade:
+### Causa 1 (MAIS PROVAVEL): Browser Supabase client em contexto server-side
 
-**1. (Mais provável) Middleware bloqueando a rota:**
-O arquivo `frontend/middleware.ts` NÃO inclui `/api/test-resend` na lista de rotas públicas.
-Se o matcher do middleware captura rotas `/api/*`, usuários não autenticados podem receber
-redirect ou erro ao invés de acessar o endpoint diretamente. Verificar se o matcher inclui `/api/test-resend`.
+Arquivo: frontend/lib/agents/newsletter/data-collector/data-collector-agent.ts
 
-**2. Build error ou env var ausente no Vercel:**
-O arquivo `route.ts` referencia `RESEND_API_KEY`. Se a variável de ambiente não está
-configurada no Vercel (Settings > Environment Variables), a build pode falhar silenciosamente
-para esta rota específica, resultando em 404.
+A classe DataCollectorAgent instancia o Supabase com:
+  private supabase = createClient() // importado de @/lib/supabase/client
 
-**Commit existente:** `feat: add Resend email test endpoint` (2026-03-11T23:16:36Z)
-**Arquivo:** `frontend/app/api/test-resend/route.ts` (2237 bytes) — presente no repo ✅
+Este eh o BROWSER client. Dentro de uma API route (server-side),
+o browser client nao tem acesso aos cookies httpOnly da sessao.
+Resultado: queries ao Supabase falham com erro de autorizacao (PostgrestError),
+que NAO eh uma instancia de Error, caindo no fallback 'Erro desconhecido'.
+
+### Causa 2 (RELACIONADA): Error handler mascarando o erro real
+
+No catch do agente:
+  const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+
+Erros do Supabase (PostgrestError) e do SDK Anthropic nao sao instancias
+de Error nativo, logo o message real eh perdido.
+
+### Causa 3 (SECUNDARIA): Cenario 401 retorna 405
+
+Com credentials:omit, o middleware redireciona para /login (GET 302),
+mas a pagina /login nao aceita POST, resultando em 405.
+Comportamento tecnicamente correto para o fluxo de middleware, mas
+diferente do esperado (401 direto).
 
 ---
 
 ## Suggested Fix Direction
 
-1. **Verificar variável de ambiente:** Confirmar que `RESEND_API_KEY` está configurada
-   em Vercel → Settings → Environment Variables (Production + Preview).
+### Fix 1 — Injetar server client no DataCollectorAgent
 
-2. **Adicionar rota ao middleware public routes:** Em `frontend/middleware.ts`,
-   adicionar `/api/test-resend` à lista de rotas que não requerem autenticação.
-   Exemplo: junto com `/api/auth/.*`.
+Opcao A: Modificar DataCollectorAgent para receber o Supabase client como parametro:
+  constructor(private supabase: SupabaseClient) {}
 
-3. **Verificar Vercel deployment logs:** Confirmar que o deploy do commit
-   `feat: add Resend email test endpoint` foi concluído sem erros de build.
+No route.ts, passar o server client:
+  const supabase = await createClient() // server client ja importado
+  const agent = new DataCollectorAgent(supabase) // injetar
 
-4. Após correção, re-testar via Cowork e confirmar JSON `{ success: true }`.
+Opcao B: Dentro do agente, importar de @/lib/supabase/server e usar await createClient()
+
+### Fix 2 — Melhorar error handler
+
+Substituir:
+  const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+Por:
+  const msg = err instanceof Error ? err.message : JSON.stringify(err) ?? String(err)
+
+Isso expoe o erro real (ex: PostgrestError com code, message, details).
+
+### Fix 3 — Verificar tabela empresa_intelligence
+
+Confirmar que a tabela existe e que as RLS policies permitem INSERT
+para o usuario autenticado com empresa_id correto.
