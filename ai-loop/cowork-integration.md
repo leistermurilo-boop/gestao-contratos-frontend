@@ -1,6 +1,24 @@
 # Cowork Integration — Formato de Relatório
 
-O Cowork deve produzir relatórios seguindo este formato padrão ao detectar bugs ou comportamentos inesperados. Salvar em `ai-loop/reports/browser-report.md` (substituindo o conteúdo anterior).
+O Cowork deve produzir relatórios seguindo este formato padrão ao detectar bugs ou comportamentos inesperados.
+
+## Protocolo Completo (2 passos obrigatórios)
+
+**Passo 1 — Escrever o report:**
+Salvar em `ai-loop/reports/browser-report.md` (substituindo o conteúdo anterior).
+
+**Passo 2 — Atualizar o INBOX (OBRIGATÓRIO):**
+Após salvar o report, atualizar `ai-loop/INBOX.md` com:
+```
+Status: READY
+Data: YYYY-MM-DD HH:MM
+Sessão de Teste: [breve descrição — ex: "teste resend email + soft delete"]
+Relatório: ai-loop/reports/browser-report.md
+Urgência: normal | alta | crítica
+Notas do Cowork: [qualquer contexto extra]
+```
+
+> Sem atualizar o INBOX, o terminal não detecta o report. Este passo é o "sinal" para o loop de agentes iniciar.
 
 ---
 

@@ -38,9 +38,26 @@ Loop de engenharia assistida por IA entre Cowork (browser), Claude Code (termina
 
 Ver `/ai-agents/` para definição completa de responsabilidades.
 
+## Como disparar o loop
+
+### Monitoramento automático (recomendado)
+```bash
+/loop 1m /analyze-inbox
+```
+Verifica o INBOX a cada 1 minuto. Quando Cowork seta `Status: READY`, o ciclo completo de agentes inicia automaticamente.
+
+### Disparo manual
+```bash
+/analyze-inbox
+```
+
+### Estado do loop
+Ver `ai-loop/INBOX.md` — states: `IDLE | READY | IN_PROGRESS | DONE`
+
 ## Regras
 
 - Reports do Cowork devem seguir o formato em `cowork-integration.md`
+- Cowork DEVE atualizar `INBOX.md` após escrever o report (é o "sinal" para o terminal)
 - Nenhum agente altera código sem um `fix-plan.md` aprovado pelo @architect
 - Todo deploy deve ser registrado em `deploy-log.md`
 - `test-history.md` deve ser atualizado antes de fechar qualquer sessão
