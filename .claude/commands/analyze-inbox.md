@@ -9,6 +9,15 @@
 
 Ao ser invocado, execute EXATAMENTE nesta ordem:
 
+### PASSO 0 — Sincronizar com GitHub
+
+Execute antes de qualquer leitura:
+```bash
+git pull origin main
+```
+
+Isso garante que o INBOX.md e browser-report.md refletem o que o Cowork escreveu via GitHub API.
+
 ### PASSO 1 — Verificar INBOX
 
 Leia `ai-loop/INBOX.md` e extraia o campo `Status`.
