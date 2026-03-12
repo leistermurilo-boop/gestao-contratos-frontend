@@ -59,7 +59,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/callback') ||
     // Rotas de auth internas — nunca redirecionar para /login (causaria loop:
     // fetch('/api/auth/resync') no client seguiria o redirect e ficaria PENDING)
-    pathname.startsWith('/api/auth/')
+    pathname.startsWith('/api/auth/') ||
+    // Endpoint de teste Resend — acesso público para validação da integração de email
+    pathname.startsWith('/api/test-resend')
 
   // Usuário autenticado tentando acessar /login → redireciona para dashboard
   if (pathname.startsWith('/login') && user) {

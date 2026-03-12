@@ -1,24 +1,17 @@
-# Fix Plan
+# Fix Plan — @architect
 
-> Plano de correção definido pelo @architect.
-> Deve ser aprovado antes de qualquer implementação pelo @dev.
-
----
-
-## Session: —
-
-**Date:** —
-**Bug:** (referência ao browser-report)
-**Analyst report:** database-analysis.md / runtime-debug.md
+**Date:** 2026-03-12
+**Bug:** GET /api/test-resend → 404 em produção
+**Analyst report:** database-analysis.md
 
 ---
 
 ## Diagnóstico Confirmado
 
-**Causa raiz:**
+**Causa raiz:** middleware bloqueia `/api/test-resend` por ausência em `isPublicRoute`
 
 **Componentes afetados:**
-- [ ] Frontend (Next.js)
+- [x] Frontend (Next.js) — middleware.ts
 - [ ] Backend (Supabase — RLS / triggers / schema)
 - [ ] API Routes
 - [ ] Services
@@ -30,11 +23,13 @@
 
 ### Abordagem
 
-**Opção escolhida:**
+**Opção escolhida:** adicionar `pathname.startsWith('/api/test-resend')` à lista `isPublicRoute`
 
-**Motivo:**
+**Motivo:** endpoint de teste sem dados sensíveis, acesso público intencional para validação Resend
 
-**Opções descartadas e por quê:**
+**Opções descartadas:**
+- Acessar autenticado: inviável para teste automatizado pelo Cowork
+- Mover para rota fora de `/api/`: desnecessário, aumenta complexidade
 
 ---
 
@@ -42,45 +37,45 @@
 
 | Arquivo | Tipo de mudança | Risco |
 |---------|----------------|-------|
-| | | baixo / médio / alto |
+| `frontend/middleware.ts` | +1 linha em `isPublicRoute` | baixo |
 
 ### Migrations necessárias
 
-- [ ] Migration XXX — descrição
+Nenhuma.
 
 ### Ordem de execução
 
-1.
-2.
-3.
+1. Editar `middleware.ts` — adicionar linha em `isPublicRoute`
+2. `npm run typecheck && npm run lint`
+3. Commit + push → Vercel auto-deploy
 
 ---
 
 ## Checklist de Segurança
 
-- [ ] Não quebra RLS existente
-- [ ] Não altera schema de forma destrutiva
-- [ ] Não remove features existentes
-- [ ] Compatível com multi-tenant (empresa_id isolado)
-- [ ] Testado em local antes do deploy
+- [x] Não quebra RLS existente
+- [x] Não altera schema de forma destrutiva
+- [x] Não remove features existentes
+- [x] Compatível com multi-tenant (endpoint não acessa dados de empresa)
+- [ ] Testado após deploy pelo Cowork
 
 ---
 
 ## Validação pelo @qa
 
 **Cenários a testar:**
-1.
-2.
-3.
+1. `GET /api/test-resend` sem auth → deve retornar JSON (200 ou 400/500, nunca 404)
+2. `GET /api/test-resend` com RESEND_API_KEY válida → `{ success: true }`
+3. Demais rotas `/api/` protegidas continuam retornando redirect para `/login` sem auth
 
-**Critério de sucesso:**
+**Critério de sucesso:** status != 404 no endpoint
 
 ---
 
 ## Status
 
-- [ ] Plano definido pelo @architect
-- [ ] Aprovado
+- [x] Plano definido pelo @architect
+- [x] Aprovado
 - [ ] Implementado pelo @dev
 - [ ] Validado pelo @qa
 - [ ] Deploy realizado
