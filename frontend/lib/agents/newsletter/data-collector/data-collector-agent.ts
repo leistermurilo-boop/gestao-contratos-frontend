@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { ClaudeClient } from '@/lib/agents/core/claude-client'
 import type { DataCollectorInput, DataCollectorOutput } from '@/lib/agents/core/types'
 
@@ -43,10 +43,9 @@ interface RawData {
 }
 
 export class DataCollectorAgent {
-  private supabase = createClient()
   private claudeClient: ClaudeClient
 
-  constructor() {
+  constructor(private supabase: SupabaseClient) {
     this.claudeClient = new ClaudeClient({
       model: 'claude-sonnet-4-6',
       maxTokens: 4000,
@@ -72,7 +71,9 @@ export class DataCollectorAgent {
         tempo_processamento_ms: Date.now() - startTime,
       }
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Erro desconhecido'
+      const msg = error instanceof Error
+        ? error.message
+        : (typeof error === 'object' ? JSON.stringify(error) : String(error))
       console.error('[DataCollectorAgent] Erro:', error)
       return {
         success: false,
@@ -269,6 +270,6 @@ RETORNE JSON com exatamente esta estrutura:
   }
 }
 
-export function createDataCollectorAgent() {
-  return new DataCollectorAgent()
+export function createDataCollectorAgent(supabase: SupabaseClient) {
+  return new DataCollectorAgent(supabase)
 }

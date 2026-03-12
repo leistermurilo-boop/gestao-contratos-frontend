@@ -70,8 +70,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Rota protegida sem sessão → redireciona para login
+  // Rota protegida sem sessão
   if (!isPublicRoute && !user) {
+    // Rotas de API retornam 401 JSON (redirect para /login causaria 405 em POST/PUT/DELETE)
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    }
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirect', pathname)

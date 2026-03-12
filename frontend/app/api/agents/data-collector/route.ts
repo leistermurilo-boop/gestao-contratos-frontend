@@ -27,7 +27,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Usuário sem empresa associada' }, { status: 400 })
     }
 
-    const agent = createDataCollectorAgent()
+    const agent = createDataCollectorAgent(supabase)
     const result = await agent.collect({
       empresa_id: usuario.empresa_id,
       periodo_meses: 12,

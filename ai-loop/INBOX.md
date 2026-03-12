@@ -8,7 +8,7 @@
 ## Estado Atual
 
 ```
-Status: READY
+Status: IN_PROGRESS
 ```
 
 ---

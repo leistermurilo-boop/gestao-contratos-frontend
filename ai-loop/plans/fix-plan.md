@@ -1,82 +1,63 @@
 # Fix Plan — @architect
 
 **Date:** 2026-03-12
-**Bug:** GET /api/test-resend → 404 em produção
+**Bug:** DataCollectorAgent 500 + 405 [Loop #2]
 **Analyst report:** database-analysis.md
 
 ---
 
 ## Diagnóstico Confirmado
 
-**Causa raiz:** middleware bloqueia `/api/test-resend` por ausência em `isPublicRoute`
+3 bugs independentes:
 
-**Componentes afetados:**
-- [x] Frontend (Next.js) — middleware.ts
-- [ ] Backend (Supabase — RLS / triggers / schema)
-- [ ] API Routes
-- [ ] Services
-- [ ] Migrations
+1. **Browser client em contexto server-side** — causa raiz do 500
+2. **Error handler mascarando PostgrestError** — causa raiz do "Erro desconhecido"
+3. **Middleware redireciona POST /api/ para login → 405** — causa raiz do 405
 
 ---
 
-## Solução Proposta
+## Solução Técnica
 
-### Abordagem
+### Fix #1 — Injetar SupabaseClient via construtor
+Remover import de `createClient` do agent. Route handler passa o server client.
 
-**Opção escolhida:** adicionar `pathname.startsWith('/api/test-resend')` à lista `isPublicRoute`
+```typescript
+// data-collector-agent.ts
+import type { SupabaseClient } from '@supabase/supabase-js'
+constructor(private supabase: SupabaseClient) {}
 
-**Motivo:** endpoint de teste sem dados sensíveis, acesso público intencional para validação Resend
+// route.ts
+const agent = new DataCollectorAgent(supabase)
+```
 
-**Opções descartadas:**
-- Acessar autenticado: inviável para teste automatizado pelo Cowork
-- Mover para rota fora de `/api/`: desnecessário, aumenta complexidade
+### Fix #2 — Error handler robusto
+```typescript
+const msg = error instanceof Error
+  ? error.message
+  : (typeof error === 'object' ? JSON.stringify(error) : String(error))
+```
 
----
-
-### Arquivos a modificar
-
-| Arquivo | Tipo de mudança | Risco |
-|---------|----------------|-------|
-| `frontend/middleware.ts` | +1 linha em `isPublicRoute` | baixo |
-
-### Migrations necessárias
-
-Nenhuma.
-
-### Ordem de execução
-
-1. Editar `middleware.ts` — adicionar linha em `isPublicRoute`
-2. `npm run typecheck && npm run lint`
-3. Commit + push → Vercel auto-deploy
-
----
-
-## Checklist de Segurança
-
-- [x] Não quebra RLS existente
-- [x] Não altera schema de forma destrutiva
-- [x] Não remove features existentes
-- [x] Compatível com multi-tenant (endpoint não acessa dados de empresa)
-- [ ] Testado após deploy pelo Cowork
+### Fix #3 — Middleware retorna 401 para /api/ sem auth
+```typescript
+if (!isPublicRoute && !user) {
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  }
+  // redirect para login apenas para rotas de página
+  ...
+}
+```
 
 ---
 
-## Validação pelo @qa
+## Arquivos Afetados
 
-**Cenários a testar:**
-1. `GET /api/test-resend` sem auth → deve retornar JSON (200 ou 400/500, nunca 404)
-2. `GET /api/test-resend` com RESEND_API_KEY válida → `{ success: true }`
-3. Demais rotas `/api/` protegidas continuam retornando redirect para `/login` sem auth
+| Arquivo | Mudança | Risco |
+|---------|---------|-------|
+| `frontend/lib/agents/newsletter/data-collector/data-collector-agent.ts` | Injetar supabase via construtor | baixo |
+| `frontend/app/api/agents/data-collector/route.ts` | Passar supabase ao construtor | baixo |
+| `frontend/middleware.ts` | 401 JSON para /api/ sem auth | baixo |
 
-**Critério de sucesso:** status != 404 no endpoint
+## Migrations: Não.
 
----
-
-## Status
-
-- [x] Plano definido pelo @architect
-- [x] Aprovado
-- [ ] Implementado pelo @dev
-- [ ] Validado pelo @qa
-- [ ] Deploy realizado
-- [ ] Confirmado pelo Cowork
+## Aprovado: @architect
