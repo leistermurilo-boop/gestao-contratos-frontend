@@ -167,6 +167,26 @@ export interface EmpresaIntelligence {
   updated_at: string
 }
 
+// ============================================
+// INSIGHT ANALYZER AGENT TYPES (Sprint 4B)
+// ============================================
+
+export interface InsightAnalyzerInput {
+  empresa_id: string
+}
+
+export interface InsightAnalyzerOutput {
+  success: boolean
+  empresa_id: string
+  intelligence_id?: string
+  total_insights: number
+  insights_criticos: number
+  apis_consultadas?: string[]
+  apis_com_erro?: string[]
+  tempo_processamento_ms: number
+  error?: string
+}
+
 export interface NewsletterHTML {
   subject: string
   preview_text: string

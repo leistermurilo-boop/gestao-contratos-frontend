@@ -1,0 +1,421 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { ClaudeClient } from '@/lib/agents/core/claude-client'
+import type { InsightAnalyzerInput, InsightAnalyzerOutput } from '@/lib/agents/core/types'
+
+/**
+ * INSIGHT ANALYZER AGENT (Sprint 4B)
+ *
+ * 1. Lê empresa_intelligence (output do Data Collector)
+ * 2. Consulta APIs externas: IPCA, Bacen/Selic, PNCP, IBGE
+ * 3. Cruza dados + gera insights com Claude
+ * 4. Adiciona contexto educacional a cada insight
+ * 5. Salva em newsletter_insights
+ *
+ * APIs com fallback via Promise.allSettled — falha parcial não para o agent.
+ */
+
+// === TIPOS INTERNOS ===
+
+interface IPCAData {
+  acumulado_12m: number
+  mes_referencia: string
+}
+
+interface SelicData {
+  valor: number
+  tendencia: 'alta' | 'queda' | 'estavel'
+}
+
+interface PNCPEdital {
+  numero: string
+  orgao: string
+  objeto: string
+  valor_estimado: number
+  data_abertura: string
+  match_score: number
+}
+
+interface IBGEData {
+  municipio: string
+  pib: number | null
+  populacao: number | null
+}
+
+interface ExternalData {
+  ipca: IPCAData | null
+  selic: SelicData | null
+  pncp: PNCPEdital[]
+  ibge: IBGEData[]
+  apis_consultadas: string[]
+  apis_com_erro: string[]
+}
+
+type Intelligence = Record<string, unknown>
+
+// === AGENT ===
+
+export class InsightAnalyzerAgent {
+  private claudeClient: ClaudeClient
+
+  constructor(private supabase: SupabaseClient) {
+    this.claudeClient = new ClaudeClient({
+      model: 'claude-sonnet-4-6',
+      maxTokens: 6000,
+      temperature: 0.4,
+    })
+  }
+
+  async analyze(input: InsightAnalyzerInput): Promise<InsightAnalyzerOutput> {
+    const startTime = Date.now()
+    const { empresa_id } = input
+
+    try {
+      const intelligence = await this.getLatestIntelligence(empresa_id)
+      if (!intelligence) {
+        return {
+          success: false,
+          empresa_id,
+          error: 'Nenhum empresa_intelligence encontrado. Execute o Data Collector primeiro.',
+          total_insights: 0,
+          insights_criticos: 0,
+          tempo_processamento_ms: Date.now() - startTime,
+        }
+      }
+
+      const externalData = await this.fetchExternalData(intelligence)
+      const insights = await this.generateInsights(intelligence, externalData)
+      await this.saveInsights(empresa_id, intelligence.id as string, insights, externalData, startTime)
+
+      return {
+        success: true,
+        empresa_id,
+        intelligence_id: intelligence.id as string,
+        total_insights: this.countInsights(insights),
+        insights_criticos: this.countCriticos(insights),
+        apis_consultadas: externalData.apis_consultadas,
+        apis_com_erro: externalData.apis_com_erro,
+        tempo_processamento_ms: Date.now() - startTime,
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : JSON.stringify(error)
+      console.error('[InsightAnalyzerAgent]', error)
+      return {
+        success: false,
+        empresa_id,
+        error: msg,
+        total_insights: 0,
+        insights_criticos: 0,
+        tempo_processamento_ms: Date.now() - startTime,
+      }
+    }
+  }
+
+  // === SUPABASE ===
+
+  private async getLatestIntelligence(empresa_id: string): Promise<Intelligence | null> {
+    const { data, error } = await this.supabase
+      .from('empresa_intelligence')
+      .select('*')
+      .eq('empresa_id', empresa_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+    if (error) throw error
+    return data as Intelligence
+  }
+
+  // === APIS EXTERNAS ===
+
+  private async fetchExternalData(intelligence: Intelligence): Promise<ExternalData> {
+    const apis_consultadas: string[] = []
+    const apis_com_erro: string[] = []
+
+    const [ipca, selic, pncp, ibge] = await Promise.allSettled([
+      this.fetchIPCA(),
+      this.fetchSelic(),
+      this.fetchPNCP(intelligence),
+      this.fetchIBGE(),
+    ])
+
+    const resolve = <T>(result: PromiseSettledResult<T>, name: string): T | null => {
+      if (result.status === 'fulfilled') {
+        apis_consultadas.push(name)
+        return result.value
+      }
+      console.warn(`[InsightAnalyzer] API ${name} falhou:`, result.reason)
+      apis_com_erro.push(name)
+      return null
+    }
+
+    return {
+      ipca: resolve(ipca, 'IPCA/IBGE'),
+      selic: resolve(selic, 'Bacen/Selic'),
+      pncp: resolve(pncp, 'PNCP') ?? [],
+      ibge: resolve(ibge, 'IBGE/PIB') ?? [],
+      apis_consultadas,
+      apis_com_erro,
+    }
+  }
+
+  private async fetchIPCA(): Promise<IPCAData> {
+    const res = await fetch(
+      'https://servicodados.ibge.gov.br/api/v3/agregados/1737/periodos/202401-202412/variaveis/2265?localidades=N1[all]',
+      { signal: AbortSignal.timeout(8000) }
+    )
+    if (!res.ok) throw new Error(`IPCA HTTP ${res.status}`)
+    const json = await res.json() as Array<{
+      resultados: Array<{ series: Array<{ serie: Record<string, string> }> }>
+    }>
+    const serie = json[0]?.resultados?.[0]?.series?.[0]?.serie ?? {}
+    const valores = Object.values(serie).map((v) => parseFloat(v || '0'))
+    const soma = valores.reduce((acc, v) => acc + v, 0)
+    return { acumulado_12m: parseFloat(soma.toFixed(2)), mes_referencia: '2024-12' }
+  }
+
+  private async fetchSelic(): Promise<SelicData> {
+    const res = await fetch(
+      'https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/3?formato=json',
+      { signal: AbortSignal.timeout(8000) }
+    )
+    if (!res.ok) throw new Error(`Bacen HTTP ${res.status}`)
+    const json = await res.json() as Array<{ valor: string }>
+    const valores = json.map((d) => parseFloat(d.valor))
+    const atual = valores[valores.length - 1]
+    const anterior = valores[0]
+    const tendencia: SelicData['tendencia'] =
+      atual > anterior ? 'alta' : atual < anterior ? 'queda' : 'estavel'
+    return { valor: atual, tendencia }
+  }
+
+  private async fetchPNCP(intelligence: Intelligence): Promise<PNCPEdital[]> {
+    const materiais = intelligence.portfolio_materiais as Array<{ descricao: string }> | null
+    if (!materiais?.length) return []
+
+    const top3 = materiais.slice(0, 3)
+    const hoje = new Date().toISOString().split('T')[0]
+    const em30dias = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+    const resultados: PNCPEdital[] = []
+
+    for (const material of top3) {
+      try {
+        const params = new URLSearchParams({
+          q: material.descricao.substring(0, 50),
+          dataInicial: hoje,
+          dataFinal: em30dias,
+          pagina: '1',
+          tamanhoPagina: '5',
+        })
+        const res = await fetch(
+          `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?${params}`,
+          { signal: AbortSignal.timeout(10000) }
+        )
+        if (!res.ok) continue
+        const json = await res.json() as {
+          data?: Array<{
+            numeroControlePNCP: string
+            unidadeOrgao?: { nomeUnidade: string }
+            objetoCompra: string
+            valorTotalEstimado: number
+            dataAberturaProposta: string
+          }>
+        }
+        for (const item of json.data ?? []) {
+          resultados.push({
+            numero: item.numeroControlePNCP,
+            orgao: item.unidadeOrgao?.nomeUnidade ?? 'N/A',
+            objeto: item.objetoCompra,
+            valor_estimado: item.valorTotalEstimado ?? 0,
+            data_abertura: item.dataAberturaProposta,
+            match_score: this.calcMatchScore(material.descricao, item.objetoCompra),
+          })
+        }
+      } catch {
+        // falha silenciosa por material — continua com os outros
+      }
+    }
+    return resultados.filter((e) => e.match_score > 0.3).slice(0, 10)
+  }
+
+  private async fetchIBGE(): Promise<IBGEData[]> {
+    // PIB nacional como proxy macro (endpoint simples e estável)
+    const res = await fetch(
+      'https://servicodados.ibge.gov.br/api/v3/agregados/5938/periodos/2021/variaveis/37?localidades=N1[all]',
+      { signal: AbortSignal.timeout(8000) }
+    )
+    if (!res.ok) throw new Error(`IBGE HTTP ${res.status}`)
+    const json = await res.json() as Array<{
+      resultados: Array<{ series: Array<{ serie: Record<string, string> }> }>
+    }>
+    const pibStr = json[0]?.resultados?.[0]?.series?.[0]?.serie?.['2021']
+    return [{ municipio: 'Brasil', pib: pibStr ? parseFloat(pibStr) : null, populacao: 214000000 }]
+  }
+
+  // === INSIGHTS COM CLAUDE ===
+
+  private async generateInsights(
+    intelligence: Intelligence,
+    external: ExternalData
+  ): Promise<Record<string, unknown>> {
+    const contexto = {
+      portfolio_materiais: intelligence.portfolio_materiais,
+      ticket_medio: intelligence.ticket_medio,
+      margem_media: intelligence.margem_media_historica,
+      orgaos_frequentes: intelligence.orgaos_frequentes,
+      esferas_atuacao: intelligence.esferas_atuacao,
+      padroes_renovacao: intelligence.padroes_renovacao,
+      total_contratos: intelligence.total_contratos_analisados,
+      ipca_12m: external.ipca?.acumulado_12m ?? null,
+      selic: external.selic ?? null,
+      pncp_total_oportunidades: external.pncp.length,
+      pncp_editais: external.pncp.slice(0, 5),
+      ibge: external.ibge,
+      apis_disponiveis: external.apis_consultadas,
+    }
+
+    const response = await this.claudeClient.chat({
+      systemPrompt:
+        'Você é o Insight Analyzer Agent do DUO Governance. Analise dados de empresa fornecedora B2G brasileira. Responda APENAS com JSON válido, sem markdown ou texto adicional. Use números reais dos dados fornecidos.',
+      prompt: `Com base nos dados internos e macroeconômicos, gere insights acionáveis com contexto educacional.
+Se uma API não retornou dados (null), ignore os insights que dependem dela.
+
+DADOS:
+${JSON.stringify(contexto, null, 2)}
+
+RETORNE exatamente este JSON:
+{
+  "insights_precificacao": [
+    {
+      "titulo": "string",
+      "prioridade": "critica|alta|media|baixa",
+      "dados": {},
+      "acao_recomendada": "string",
+      "valor_recuperavel": 0,
+      "educacao": {
+        "conceito": "string",
+        "explicacao": "string",
+        "como_aplicar": "string",
+        "exemplo_pratico": "string"
+      }
+    }
+  ],
+  "insights_radar_b2g": [
+    {
+      "titulo": "string",
+      "prioridade": "alta|media",
+      "oportunidades": 0,
+      "valor_total_oportunidades": 0,
+      "acao_recomendada": "string",
+      "educacao": {
+        "conceito": "string",
+        "explicacao": "string",
+        "como_aplicar": "string",
+        "exemplo_pratico": "string"
+      }
+    }
+  ],
+  "insights_macro": [
+    {
+      "titulo": "string",
+      "prioridade": "media|baixa",
+      "selic_atual": 0,
+      "tendencia": "alta|queda|estavel",
+      "impacto": "string",
+      "acao_recomendada": "string",
+      "educacao": {
+        "conceito": "string",
+        "explicacao": "string",
+        "como_aplicar": "string",
+        "exemplo_pratico": "string"
+      }
+    }
+  ],
+  "insights_regionais": [
+    {
+      "titulo": "string",
+      "prioridade": "media|baixa",
+      "regiao": "string",
+      "potencial_estimado": 0,
+      "acao_recomendada": "string",
+      "educacao": {
+        "conceito": "string",
+        "explicacao": "string",
+        "como_aplicar": "string",
+        "exemplo_pratico": "string"
+      }
+    }
+  ]
+}`,
+    })
+
+    const jsonMatch = response.content.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('Claude não retornou JSON válido')
+    return JSON.parse(jsonMatch[0])
+  }
+
+  // === SALVAR ===
+
+  private async saveInsights(
+    empresa_id: string,
+    intelligence_id: string,
+    insights: Record<string, unknown>,
+    external: ExternalData,
+    startTime: number
+  ) {
+    const total = this.countInsights(insights)
+    const criticos = this.countCriticos(insights)
+    const apisOk = external.apis_consultadas.length
+    const confianca = apisOk >= 3 ? 0.85 : apisOk >= 2 ? 0.65 : 0.40
+
+    const { error } = await this.supabase.from('newsletter_insights').insert({
+      empresa_id,
+      intelligence_id,
+      periodo_referencia: new Date().toISOString().split('T')[0],
+      insights_precificacao: insights.insights_precificacao,
+      insights_radar_b2g: insights.insights_radar_b2g,
+      insights_macro: insights.insights_macro,
+      insights_regionais: insights.insights_regionais,
+      ipca_12m: external.ipca?.acumulado_12m ?? null,
+      selic_atual: external.selic?.valor ?? null,
+      dados_pncp: external.pncp,
+      dados_ibge: external.ibge,
+      total_insights: total,
+      insights_criticos: criticos,
+      confianca_score: confianca,
+      versao_agent: '1.0.0',
+      tempo_processamento_ms: Date.now() - startTime,
+      apis_consultadas: external.apis_consultadas,
+      apis_com_erro: external.apis_com_erro,
+    })
+    if (error) throw error
+  }
+
+  // === HELPERS ===
+
+  private calcMatchScore(portfolio: string, objeto: string): number {
+    const palavras = portfolio.toLowerCase().split(' ').filter((w) => w.length > 3)
+    const texto = objeto.toLowerCase()
+    const matches = palavras.filter((w) => texto.includes(w)).length
+    return Math.min(matches / Math.max(palavras.length, 1), 1)
+  }
+
+  private countInsights(insights: Record<string, unknown>): number {
+    return ['insights_precificacao', 'insights_radar_b2g', 'insights_macro', 'insights_regionais'].reduce(
+      (sum, k) => sum + ((insights[k] as unknown[])?.length ?? 0),
+      0
+    )
+  }
+
+  private countCriticos(insights: Record<string, unknown>): number {
+    return ['insights_precificacao', 'insights_radar_b2g', 'insights_macro', 'insights_regionais'].reduce(
+      (sum, k) => {
+        const arr = (insights[k] as Array<{ prioridade: string }>) ?? []
+        return sum + arr.filter((i) => i.prioridade === 'critica' || i.prioridade === 'alta').length
+      },
+      0
+    )
+  }
+}
+
+export function createInsightAnalyzerAgent(supabase: SupabaseClient) {
+  return new InsightAnalyzerAgent(supabase)
+}
