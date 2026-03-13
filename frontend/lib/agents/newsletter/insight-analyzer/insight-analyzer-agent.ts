@@ -268,17 +268,23 @@ export class InsightAnalyzerAgent {
   }
 
   private async fetchIBGE(): Promise<IBGEData[]> {
-    // BUG 4 fix: PIB tem defasagem de ~2 anos — usar anoAtual - 2 dinamicamente (hora Brasília)
-    const anoRef = nowBrasilia().getUTCFullYear() - 2
+    // BUG 10 fix: buscar range 2020-anoAtual e pegar último ano com valor publicado.
+    // IBGE tem defasagem variável (2-3 anos) — offset fixo falha quando dado ainda não publicado.
+    const anoAtual = nowBrasilia().getUTCFullYear()
     const res = await fetch(
-      `https://servicodados.ibge.gov.br/api/v3/agregados/5938/periodos/${anoRef}/variaveis/37?localidades=N1[all]`,
+      `https://servicodados.ibge.gov.br/api/v3/agregados/5938/periodos/2020-${anoAtual}/variaveis/37?localidades=N1[all]`,
       { signal: AbortSignal.timeout(8000) }
     )
     if (!res.ok) throw new Error(`IBGE HTTP ${res.status}`)
     const json = await res.json() as Array<{
       resultados: Array<{ series: Array<{ serie: Record<string, string> }> }>
     }>
-    const pibStr = json[0]?.resultados?.[0]?.series?.[0]?.serie?.[String(anoRef)]
+    const serie = json[0]?.resultados?.[0]?.series?.[0]?.serie ?? {}
+    // Pegar último ano com valor válido (não nulo e não '-')
+    const ultimoAno = Object.entries(serie)
+      .reverse()
+      .find(([, v]) => v && v !== '-' && v !== '0')
+    const pibStr = ultimoAno?.[1] ?? null
     return [{ municipio: 'Brasil', pib: pibStr ? parseFloat(pibStr) : null, populacao: 214000000 }]
   }
 
