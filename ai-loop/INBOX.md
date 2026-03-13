@@ -13,211 +13,48 @@
 
 ---
 
----
+## Sprint 4E — Fixes Aplicados (2026-03-13)
 
-## Sprint 4E — Correção de Agentes Newsletter
+Todos os 9 bugs corrigidos e deployados. Cowork pode re-testar o pipeline completo.
 
-**Data:** 2026-03-13
-**Sessão:** Audit completo de todos os 4 agentes pelo Cowork (ai-production-debugger)
-**Prioridade:** 🔴 CRÍTICO — newsletter enviando dados incorretos em produção
-
----
-
-## Tasks para o Terminal
-
-### 🔴 BUG 1+2 — insight-analyzer: fetchIPCA() cálculo errado + período hardcoded
-
-**Arquivo:** `frontend/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent.ts`
-
-**Problema:** IPCA retornando 52.41% (soma de 12 meses) em vez de 4.83% (último valor).
-A variável 2265 do IBGE SIDRA já é acumulada em 12 meses por observação — somar os 12 valores é erro duplo.
-Além disso, o período está hardcoded como `202401-202412` — em 2027 vai buscar dados de 2024.
-
-**Fix BUG 1 — cálculo (linha ~172):**
-```typescript
-// ANTES (errado):
-const soma = valores.reduce((acc, v) => acc + v, 0)
-return { acumulado_12m: parseFloat(soma.toFixed(2)), mes_referencia: '2024-12' }
-
-// DEPOIS (correto):
-const ultimo = valores[valores.length - 1]
-const ultimoMes = Object.keys(serie).pop() ?? ''
-return { acumulado_12m: parseFloat(ultimo.toFixed(2)), mes_referencia: ultimoMes }
-```
-
-**Fix BUG 2 — período dinâmico (linha ~155):**
-```typescript
-// ANTES (hardcoded):
-'https://servicodados.ibge.gov.br/api/v3/agregados/1737/periodos/202401-202412/variaveis/2265?localidades=N1[all]'
-
-// DEPOIS (dinâmico):
-const now = new Date()
-const anoAtual = now.getFullYear()
-const mesAtual = String(now.getMonth() + 1).padStart(2, '0')
-const periodoInicio = `${anoAtual}01`
-const periodoFim = `${anoAtual}${mesAtual}`
-const url = `https://servicodados.ibge.gov.br/api/v3/agregados/1737/periodos/${periodoInicio}-${periodoFim}/variaveis/2265?localidades=N1[all]`
-```
+**Commits:**
+- `bf99210` — fix Sprint 4E: 8 bugs agents newsletter
+- `0883da8` — fix timezone: hora de Brasília (BRT UTC-3) em todas capturas de data
+- `613a660` — fix content-writer: getEmpresaNome coluna 'nome' → 'razao_social'/'nome_fantasia'
 
 ---
 
-### 🔴 BUG 3 — insight-analyzer: fetchPNCP() 3 parâmetros errados (sempre retorna [])
+## O que foi corrigido
 
-**Arquivo:** `frontend/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent.ts`
-
-**Problema:** PNCP sempre retorna array vazio. Confirmado live com 3 erros simultâneos:
-- Sem `codigoModalidadeContratacao` → HTTP 400: "Required parameter not present"
-- Data formato `yyyy-MM-dd` → HTTP 422: "Data Inicial inválida, deve estar no formato yyyyMMdd"  
-- `tamanhoPagina: '5'` → HTTP 400: "deve ser maior que ou igual à 10"
-- Com as 3 correções → HTTP 200 + 739 editais disponíveis
-
-**Fix:**
-```typescript
-// ANTES (errado):
-const params = new URLSearchParams({
-  q: material,
-  dataInicial: hoje,        // ex: '2026-03-13'
-  dataFinal: em30dias,      // ex: '2026-04-12'
-  pagina: '1',
-  tamanhoPagina: '5',
-})
-
-// DEPOIS (correto):
-const params = new URLSearchParams({
-  q: material,
-  dataInicial: hoje.replace(/-/g, ''),       // ex: '20260313'
-  dataFinal: em30dias.replace(/-/g, ''),     // ex: '20260412'
-  pagina: '1',
-  tamanhoPagina: '10',
-  codigoModalidadeContratacao: '5',          // Pregão
-})
-```
+| # | Arquivo | Fix aplicado |
+|---|---------|-------------|
+| 1+2 | insight-analyzer: fetchIPCA() | Último valor (não soma) + período dinâmico BRT |
+| 3 | insight-analyzer: fetchPNCP() | Data yyyyMMdd + tamanhoPagina 10 + codigoModalidade 6 |
+| 4 | insight-analyzer: fetchIBGE() | Ano dinâmico `anoAtual - 2` (defasagem IBGE) |
+| 5 | insight-analyzer: confianca_score | Passada ao Claude no system prompt |
+| 6 | content-writer: progresso_maturidade | Calculado por fontes reais (0/25/50/75/100%) |
+| 7 | send-newsletter: headers | List-Unsubscribe + replyTo adicionados |
+| 8 | send-newsletter: getDraft | Com draft_id: busca direta sem filtrar status |
+| 9 | content-writer: empresa_nome | `.select('razao_social, nome_fantasia')` — era coluna inexistente 'nome' |
 
 ---
 
-### 🟡 BUG 4 — insight-analyzer: fetchIBGE() ano hardcoded 2021 (PIB desatualizado)
+## Para o Cowork re-testar
 
-**Arquivo:** `frontend/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent.ts`
-
-**Problema:** URL hardcoded com `periodos/2021` — retorna PIB R$9.01T.
-Dado correto disponível: `periodos/2022` → PIB R$10.08T.
-
-**Fix:**
-```typescript
-// ANTES:
-'https://servicodados.ibge.gov.br/api/v3/agregados/5938/periodos/2021/variaveis/37?localidades=N1[all]'
-
-// DEPOIS:
-'https://servicodados.ibge.gov.br/api/v3/agregados/5938/periodos/2022/variaveis/37?localidades=N1[all]'
-// Obs: considerar tornar dinâmico pegando (anoAtual - 2) pois dado tem 2 anos de defasagem
-```
+1. `POST /api/agents/insight-analyzer` → verificar IPCA ~4.8%, PNCP com editais, PIB 2024
+2. `POST /api/agents/content-writer` → verificar nome da empresa correto no header da news
+3. `POST /api/agents/send-newsletter` → verificar email recebido com replyTo + List-Unsubscribe
+4. Verificar `progresso_maturidade` refletindo fontes reais (não sempre 70%)
 
 ---
 
-### 🟡 BUG 5 — insight-analyzer: confianca_score calculado mas nunca usado
+## Histórico
 
-**Arquivo:** `frontend/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent.ts`
-
-**Problema:** `saveInsights()` calcula `confianca_score` (0.85/0.65/0.40) e salva no banco,
-mas `generateInsights()` nunca recebe esse valor. Claude gera análises sem saber a qualidade dos dados.
-
-**Fix — passar confianca_score para o prompt de generateInsights():**
-```typescript
-// Adicionar ao prompt de generateInsights():
-const confiancaLabel = confianca_score >= 0.8 ? 'ALTA' : confianca_score >= 0.6 ? 'MÉDIA' : 'BAIXA'
-// No system prompt incluir:
-`Qualidade dos dados disponíveis: ${confiancaLabel} (score: ${confianca_score}).
-${confianca_score < 0.6 ? 'ATENÇÃO: dados incompletos — adicione ressalvas nas análises.' : ''}`
-```
-
----
-
-### 🟡 BUG 6 — content-writer: progresso_maturidade sempre 70% (hardcoded)
-
-**Arquivo:** `frontend/lib/agents/newsletter/content-writer/content-writer-agent.ts`
-
-**Problema:** `progresso_maturidade: intelligence ? 70 : undefined` — sempre 70% quando há dados.
-Nunca reflete o estado real do contrato/licitação.
-
-**Fix — calcular baseado em campos reais:**
-```typescript
-// Substituir por lógica real, ex:
-function calcularProgresso(intelligence: IntelligenceData): number {
-  const scores = []
-  if (intelligence.dados_mercado?.ipca) scores.push(100)
-  if (intelligence.dados_pncp?.length > 0) scores.push(100)
-  if (intelligence.dados_ibge?.pib) scores.push(100)
-  if (intelligence.dados_selic) scores.push(100)
-  return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b) / scores.length) : 0
-}
-```
-
----
-
-### 🔵 BUG 7 — send-newsletter: faltam headers List-Unsubscribe e replyTo
-
-**Arquivo:** `frontend/lib/agents/newsletter/send-newsletter/send-newsletter-agent.ts`
-
-**Problema:** Email enviado sem `List-Unsubscribe` (obrigatório por RFC 2369 + Google/Yahoo 2024)
-e sem `replyTo` configurado.
-
-**Fix:**
-```typescript
-await resend.emails.send({
-  from: 'Radar DUO™ <newsletter@duogovernance.com.br>',
-  to: destinatario,
-  subject: assunto,
-  html: html_content,
-  replyTo: 'contato@duogovernance.com.br',
-  headers: {
-    'List-Unsubscribe': '<mailto:unsubscribe@duogovernance.com.br>',
-    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-  },
-})
-```
-
----
-
-### 🔵 BUG 8 — send-newsletter: getDraft() ignora draft_id quando status != 'draft'
-
-**Arquivo:** `frontend/lib/agents/newsletter/send-newsletter/send-newsletter-agent.ts`
-
-**Problema:** Quando `draft_id` é fornecido, `getDraft()` ainda filtra `.eq('status', 'draft')`.
-Se o draft foi enviado antes (status='sent'), retorna null e falha silenciosamente.
-
-**Fix:**
-```typescript
-async function getDraft(draft_id?: string) {
-  let query = supabase.from('newsletter_drafts').select('*')
-  
-  if (draft_id) {
-    // Busca direta por ID — ignora status
-    query = query.eq('id', draft_id)
-  } else {
-    // Sem ID: pega o draft mais recente com status='draft'
-    query = query.eq('status', 'draft').order('criado_em', { ascending: false }).limit(1)
-  }
-  
-  const { data, error } = await query.single()
-  if (error || !data) return null
-  return data
-}
-```
-
----
-
-## Resumo de Prioridades
-
-| # | Arquivo | Severidade | Impacto |
-|---|---------|-----------|---------|
-| 1+2 | insight-analyzer: fetchIPCA() | 🔴 CRÍTICO | IPCA 52.41% em vez de ~4.83% |
-| 3 | insight-analyzer: fetchPNCP() | 🔴 CRÍTICO | Radar B2G sempre vazio |
-| 4 | insight-analyzer: fetchIBGE() | 🟡 ALTO | PIB 2 anos desatualizado |
-| 5 | insight-analyzer: confianca_score | 🟡 ALTO | Qualidade não influencia IA |
-| 6 | content-writer: progresso_maturidade | 🟡 ALTO | Sempre 70% hardcoded |
-| 7 | send-newsletter: headers email | 🔵 MÉDIO | Sem unsubscribe (compliance) |
-| 8 | send-newsletter: getDraft status | 🔵 MÉDIO | Falha ao reenviar drafts |
-
----
-
-**Após implementar todos os fixes acima, execute os testes de validação e atualize o Status para DONE.**
+| Data | Sessão | Status | Ciclo |
+|------|--------|--------|-------|
+| 2026-03-12 | Loop #1 Resend middleware | ✅ DONE | dev |
+| 2026-03-12 | Loop #2 Sprint 4A Data Collector | ✅ DONE | analyst → architect → dev → qa |
+| 2026-03-12 | Loop #3 Sprint 4B Insight Analyzer | ✅ DONE | analyst → architect → dev → qa |
+| 2026-03-12 | Loop #4 Sprint 4C fix maxTokens | ✅ DONE | dev |
+| 2026-03-12 | Loop #4b Sprint 4C design system | ✅ DONE | dev |
+| 2026-03-13 | Loop #5 Sprint 4E 9 bugs newsletter | ✅ DONE | analyst → architect → dev → qa |
