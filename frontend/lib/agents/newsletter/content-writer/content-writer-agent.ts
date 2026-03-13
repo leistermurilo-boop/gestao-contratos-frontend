@@ -1,26 +1,29 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ClaudeClient } from '@/lib/agents/core/claude-client'
 import type { NewsletterHTML } from '@/lib/agents/core/types'
+import { decideTema } from './email-themes'
+import { renderEmailTemplate } from './email-template'
+import type { EmailTemplateParams, EmailAlerta, EmailInsight, EmailRadarB2G, EmailConceito, EmailROI } from './email-template'
 
 /**
- * CONTENT WRITER AGENT (Sprint 4C)
+ * CONTENT WRITER AGENT (Sprint 4C — v1.2.0)
  *
- * 1. Lê newsletter_insights (output do Insight Analyzer)
- * 2. Lê empresa_intelligence para contexto de personalização
- * 3. Gera newsletter em 2 chamadas Claude separadas:
- *    - Chamada 1: metadados JSON pequeno (~300 tokens)
- *    - Chamada 2: HTML body direto, sem JSON wrapper (~3000-5000 tokens)
- * 4. Monta NewsletterHTML localmente e salva em newsletter_drafts
+ * Arquitetura:
+ * 1. Claude gera metadados JSON ricos (conteúdo textual)
+ * 2. renderEmailTemplate() constrói o HTML com identidade visual fixa
  *
- * Motivo do split: claude-sonnet-4-6 tem limite ~8192 tokens de output.
- * Newsletter HTML completa + JSON wrapper excede esse limite causando truncação.
+ * Por que split: claude-sonnet-4-6 tem ~8192 tokens de output.
+ * HTML + JSON wrapper excedia esse limite. Template TypeScript resolve:
+ * - Claude foca em conteúdo (~500 tokens)
+ * - Template garante identidade visual DUO™ sempre consistente
+ * - Variação visual via sistema de temas (ALERTA / OPORTUNIDADE / MACRO / PADRÃO)
  */
 
 // === TIPOS INTERNOS ===
 
 export interface ContentWriterInput {
   empresa_id: string
-  insights_id?: string // se omitido, usa o mais recente
+  insights_id?: string
 }
 
 export interface ContentWriterOutput {
@@ -32,12 +35,15 @@ export interface ContentWriterOutput {
   error?: string
 }
 
-interface NewsletterMeta {
+interface NewsletterMetaRaw {
   subject: string
   preview_text: string
-  alertas_criticos: Array<{ titulo: string; descricao: string; acao: string }>
-  insights_semana: Array<{ titulo: string; contexto: string; impacto: string }>
-  radar_b2g: Array<{ oportunidade: string; prazo: string; relevancia: string }>
+  numero_destaque: { valor: string; label: string }
+  alertas: EmailAlerta[]
+  insights: EmailInsight[]
+  radar_b2g: EmailRadarB2G[]
+  conceito: EmailConceito | null
+  roi: EmailROI | null
   cta_principal: string
   conceitos_ensinados: string[]
   roi_demonstrado: number
@@ -76,14 +82,40 @@ export class ContentWriterAgent {
 
       const intelligence = await this.getLatestIntelligence(empresa_id)
       const empresaNome = await this.getEmpresaNome(empresa_id)
+      const edicao = await this.getProximaEdicao(empresa_id)
 
-      // Chamada 1: metadados JSON pequeno
+      // Claude gera apenas o conteúdo textual rico (~500 tokens)
       const meta = await this.generateMeta(insights, intelligence, empresaNome)
 
-      // Chamada 2: HTML body direto (sem JSON wrapper)
-      const htmlBody = await this.generateHTML(meta, empresaNome)
+      // Template TypeScript constrói o HTML com identidade DUO™
+      const tema = decideTema({
+        insights_criticos: insights.insights_criticos as number ?? 0,
+        radar_b2g_count: meta.radar_b2g.length,
+        has_macro_dominante: Array.isArray(insights.insights_macro) && (insights.insights_macro as unknown[]).length > 0,
+      })
 
-      const newsletter = this.assembleNewsletter(meta, htmlBody, empresaNome)
+      const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+
+      const templateParams: EmailTemplateParams = {
+        tema,
+        edicao,
+        data_formatada: hoje,
+        empresa_nome: empresaNome,
+        numero_destaque: meta.numero_destaque,
+        alertas: meta.alertas,
+        insights: meta.insights,
+        radar_b2g: meta.radar_b2g,
+        ipca_12m: insights.ipca_12m as number | null ?? null,
+        selic_atual: insights.selic_atual as number | null ?? null,
+        conceito: meta.conceito,
+        roi: meta.roi,
+        cta_principal: meta.cta_principal,
+        nivel_maturidade: intelligence ? 'Estratégico' : undefined,
+        progresso_maturidade: intelligence ? 70 : undefined,
+      }
+
+      const html = renderEmailTemplate(templateParams)
+      const newsletter = this.assembleNewsletter(meta, html, empresaNome)
       const draftId = await this.saveDraft(empresa_id, insights.id as string, newsletter, startTime)
 
       return {
@@ -144,13 +176,21 @@ export class ContentWriterAgent {
     return (data as { nome?: string } | null)?.nome ?? 'sua empresa'
   }
 
-  // === CHAMADA 1: METADADOS JSON (~300 tokens output) ===
+  private async getProximaEdicao(empresa_id: string): Promise<number> {
+    const { count } = await this.supabase
+      .from('newsletter_drafts')
+      .select('*', { count: 'exact', head: true })
+      .eq('empresa_id', empresa_id)
+    return (count ?? 0) + 1
+  }
+
+  // === CLAUDE: CONTEÚDO TEXTUAL RICO ===
 
   private async generateMeta(
     insights: NewsletterInsights,
     intelligence: Intelligence | null,
     empresaNome: string
-  ): Promise<NewsletterMeta> {
+  ): Promise<NewsletterMetaRaw> {
     const contexto = {
       empresa_nome: empresaNome,
       insights_precificacao: insights.insights_precificacao,
@@ -163,23 +203,69 @@ export class ContentWriterAgent {
       insights_criticos: insights.insights_criticos,
       total_contratos: intelligence?.total_contratos_analisados ?? null,
       margem_media: intelligence?.margem_media_historica ?? null,
+      ticket_medio: intelligence?.ticket_medio ?? null,
     }
 
     const response = await this.claudeClient.chat({
-      systemPrompt: 'Você é um analista B2G. Responda APENAS com JSON válido. Sem markdown, sem texto extra.',
-      prompt: `Extraia os metadados de newsletter para ${empresaNome}. Seja conciso — máximo 3 itens por array.
+      systemPrompt: `Você é redator sênior da newsletter Radar DUO™ — consultoria B2G brasileira.
+
+TOM OBRIGATÓRIO:
+- Dados concretos, não promessas vagas
+- Urgência calculada, não sensacionalismo
+- Comparação clara (empresa vs mercado)
+- CTAs específicos e acionáveis
+
+Responda APENAS com JSON válido. Sem markdown, sem texto extra.`,
+
+      prompt: `Gere o conteúdo editorial da newsletter para ${empresaNome}.
 
 DADOS:
 ${JSON.stringify(contexto, null, 2)}
 
 RETORNE:
 {
-  "subject": "string (max 60 chars, mencionar alertas críticos)",
-  "preview_text": "string (max 100 chars)",
-  "alertas_criticos": [{ "titulo": "string", "descricao": "string (1 frase)", "acao": "string (1 frase)" }],
-  "insights_semana": [{ "titulo": "string", "contexto": "string (1 frase)", "impacto": "string (1 frase)" }],
-  "radar_b2g": [{ "oportunidade": "string", "prazo": "string", "relevancia": "string (1 frase)" }],
-  "cta_principal": "string (ação mais urgente)",
+  "subject": "string (max 60 chars, número concreto, ex: '3 alertas críticos + R$ 1.2M em oportunidades')",
+  "preview_text": "string (max 100 chars, gancho forte)",
+  "numero_destaque": {
+    "valor": "string (ex: 'R$ 2,3M' ou '4 alertas' ou '8.5%')",
+    "label": "string (ex: 'em oportunidades B2G detectadas esta semana')"
+  },
+  "alertas": [
+    {
+      "titulo": "string (específico, ex: 'Contrato PM-089 vence em 18 dias')",
+      "descricao": "string (1-2 frases com dados concretos)",
+      "acao": "string (ação específica e acionável)",
+      "prioridade": "critica|alta|media|baixa"
+    }
+  ],
+  "insights": [
+    {
+      "titulo": "string (específico com números)",
+      "contexto": "string (cruzamento de dados interno × API)",
+      "impacto": "string (impacto financeiro estimado)"
+    }
+  ],
+  "radar_b2g": [
+    {
+      "oportunidade": "string (nome do edital/pregão)",
+      "prazo": "string (ex: '12 dias' ou 'vence 25/03')",
+      "relevancia": "string (por que é relevante para este portfolio)"
+    }
+  ],
+  "conceito": {
+    "titulo": "string (conceito educacional desta edição)",
+    "explicacao": "string (2-3 frases em linguagem acessível, com base legal se aplicável)",
+    "exemplo": "string (exemplo real com números)",
+    "cta": "string (como o DUO ajuda com isso)"
+  },
+  "roi": {
+    "valor_total": 0,
+    "breakdown": [
+      { "descricao": "string", "valor": 0 }
+    ],
+    "custo_duo": 540
+  },
+  "cta_principal": "string (ação mais urgente da semana)",
   "conceitos_ensinados": ["string"],
   "roi_demonstrado": 0
 }`,
@@ -189,51 +275,24 @@ RETORNE:
     const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (fence) raw = fence[1].trim()
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('Chamada 1 (meta): Claude não retornou JSON válido')
-    return JSON.parse(jsonMatch[0]) as NewsletterMeta
+    if (!jsonMatch) {
+      console.error('[ContentWriterAgent] Claude raw:', raw.substring(0, 500))
+      throw new Error('Claude não retornou JSON válido nos metadados')
+    }
+    return JSON.parse(jsonMatch[0]) as NewsletterMetaRaw
   }
 
-  // === CHAMADA 2: HTML BODY DIRETO (~3000 tokens output) ===
+  // === MONTAGEM ===
 
-  private async generateHTML(meta: NewsletterMeta, empresaNome: string): Promise<string> {
-    const response = await this.claudeClient.chat({
-      systemPrompt: `Você é um desenvolvedor de emails HTML.
-Gere SOMENTE o HTML body do email — sem DOCTYPE, sem <html>, sem JSON, sem markdown.
-Use inline CSS minimalista. Estrutura clara. Max 3000 tokens.`,
-
-      prompt: `Gere o body HTML de newsletter para ${empresaNome}.
-
-METADADOS:
-${JSON.stringify(meta, null, 2)}
-
-ESTRUTURA (div container max-width:650px):
-1. Header navy (#0F172A): "DUO Governance" + data de hoje
-2. Alertas críticos (fundo #FEF2F2, borda #EF4444): lista de alertas_criticos
-3. Insights da semana (fundo #F8FAFC): lista de insights_semana com contexto educacional (fundo #F0FDF4, borda esq #10B981)
-4. Radar B2G™ (fundo #ECFDF5): lista de radar_b2g
-5. Ação principal: cta_principal em destaque verde #10B981
-6. Disclaimer (fundo #FEF3C7): "Dicas baseadas em dados. Não é consultoria jurídica."
-7. Footer: "DUO Governance | Desinscrever"
-
-Retorne APENAS o HTML, começando com <div style="...">`,
-    })
-
-    // HTML direto — extrair apenas o bloco <div...> se vier com texto extra
-    const htmlMatch = response.content.match(/<div[\s\S]*/)
-    return htmlMatch ? htmlMatch[0] : response.content
-  }
-
-  // === MONTAGEM LOCAL ===
-
-  private assembleNewsletter(meta: NewsletterMeta, htmlBody: string, empresaNome: string): NewsletterHTML {
+  private assembleNewsletter(meta: NewsletterMetaRaw, html: string, empresaNome: string): NewsletterHTML {
     const plainText = [
       `Assunto: ${meta.subject}`,
       '',
-      'ALERTAS CRÍTICOS:',
-      ...meta.alertas_criticos.map(a => `- ${a.titulo}: ${a.acao}`),
+      'ALERTAS:',
+      ...meta.alertas.map(a => `- ${a.titulo}: ${a.acao}`),
       '',
-      'INSIGHTS DA SEMANA:',
-      ...meta.insights_semana.map(i => `- ${i.titulo}: ${i.impacto}`),
+      'INSIGHTS:',
+      ...meta.insights.map(i => `- ${i.titulo}: ${i.impacto}`),
       '',
       'RADAR B2G:',
       ...meta.radar_b2g.map(r => `- ${r.oportunidade} (${r.prazo})`),
@@ -241,24 +300,24 @@ Retorne APENAS o HTML, começando com <div style="...">`,
       `AÇÃO PRINCIPAL: ${meta.cta_principal}`,
     ].join('\n')
 
-    const palavras = htmlBody.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length
+    const palavras = html.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length
 
     return {
       subject: meta.subject,
       preview_text: meta.preview_text,
-      html: htmlBody,
+      html,
       plain_text: plainText,
       metadata: {
         palavras,
         tempo_leitura_estimado: `${Math.max(1, Math.round(palavras / 200))} min`,
-        secoes: 5,
-        ctas: 1,
+        secoes: 8,
+        ctas: 2,
       },
       conceitos_ensinados: meta.conceitos_ensinados,
       roi_demonstrado: meta.roi_demonstrado || undefined,
       personalizacao: {
         empresa: empresaNome,
-        contratos_referenciados: meta.alertas_criticos.length,
+        contratos_referenciados: meta.alertas.length,
         orgaos_mencionados: meta.radar_b2g.length,
         historico_usado: false,
       },
@@ -292,7 +351,7 @@ Retorne APENAS o HTML, começando com <div style="...">`,
         contratos_referenciados: newsletter.personalizacao.contratos_referenciados,
         orgaos_mencionados: newsletter.personalizacao.orgaos_mencionados,
         historico_usado: newsletter.personalizacao.historico_usado,
-        versao_agent: '1.1.0',
+        versao_agent: '1.2.0',
         tempo_processamento_ms: Date.now() - startTime,
       })
       .select('id')
