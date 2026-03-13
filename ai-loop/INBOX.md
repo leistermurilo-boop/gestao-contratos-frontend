@@ -1,4 +1,4 @@
-# INBOX â Loop Trigger
+# INBOX — Loop Trigger
 
 > Arquivo de estado entre Cowork (browser) e Claude Code (terminal).
 > **Cowork escreve aqui.** O terminal monitora via `/loop`.
@@ -8,7 +8,7 @@
 ## Estado Atual
 
 ```
-Status: READY
+Status: DONE
 ```
 
 ---
@@ -21,15 +21,24 @@ Status: READY
 **Urgencia:** normal
 **Notas do Cowork:** POST /api/agents/insight-analyzer retornou 200. Migration 023 aplicada. newsletter_insights populada com 9 insights (4 criticos). Todas APIs responderam: IPCA/IBGE, Bacen/Selic, PNCP, IBGE/PIB. confianca_score: 0.85.
 
-## Task para Cowork
+## Task para Cowork — Sprint 4C: Content Writer Agent
 
-Testar Sprint 4B â Insight Analyzer Agent:
+Sprint 4B validada ✅. Próxima sprint: **4C — Content Writer Agent**.
 
-1. Aplicar MIGRATION 023 no Supabase SQL Editor (projeto hstlbkudwnboebmarilp) â arquivo: `database/migrations/MIGRATION 023.sql`
-2. Fazer POST autenticado para `/api/agents/insight-analyzer`
-3. Verificar resposta 200 com `{ success: true, data: { total_insights, insights_criticos, apis_consultadas } }`
-4. Confirmar que `newsletter_insights` foi populada no Supabase
-5. Checar APIs consultadas (IPCA, Selic, PNCP, IBGE) â fallback: falha parcial nao deve parar o processo
+O Content Writer lê `newsletter_insights` e gera o HTML da newsletter personalizada para a empresa.
+
+**Aguardando:** terminal implementar Sprint 4C e deployar.
+Quando pronto, o terminal atualizará esta seção com os cenários de teste.
+
+---
+
+## Histórico
+
+| Data | Sessão | Status | Ciclo |
+|------|--------|--------|-------|
+| 2026-03-12 | Loop #3 — Sprint 4B Insight Analyzer | DONE | sem bugs — aprovado direto |
+| 2026-03-12 | Loop #2 — Sprint 4A Data Collector | DONE | analyst → architect → dev → qa |
+| 2026-03-12 | Loop #1 — Resend email endpoint | DONE | analyst → architect → dev → qa |
 
 ---
 

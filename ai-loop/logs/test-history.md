@@ -17,6 +17,18 @@
 
 ## Histórico
 
+### [2026-03-12] — Sprint 4B Insight Analyzer Agent (Cowork loop #3)
+| Cenário | Perfil | Resultado | Notas |
+|---------|--------|-----------|-------|
+| POST autenticado → 200 | admin | ✅ | 9 insights, 4 críticos, 102s |
+| newsletter_insights populada | admin | ✅ | confianca_score 0.85 |
+| IPCA/IBGE consultada | — | ✅ | acumulado_12m retornado |
+| Bacen/Selic consultada | — | ✅ | tendência retornada |
+| PNCP consultada | — | ✅ | editais para portfolio materiais |
+| IBGE/PIB consultado | — | ✅ | PIB nacional retornado |
+| Fallback parcial (apis_com_erro: []) | — | ✅ | nenhuma falha nesta rodada |
+| POST sem auth → 401 | — | ✅ | {"error":"Não autenticado"} |
+
 ### [2026-03-12] — Sprint 4A Data Collector Agent (Cowork loop #2)
 | Cenário | Perfil | Resultado | Notas |
 |---------|--------|-----------|-------|
