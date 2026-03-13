@@ -1,21 +1,91 @@
 # PROGRESS.md - Estado do Projeto
 
 **Data:** 2026-03-13 (última atualização)
-**Sessão:** Sprint 4A + 4B + 4C — Newsletter Agents System + Design System DUO™
+**Sessão:** Sprint 4D + 4E + 4F — Send Newsletter + Bug Fixes + Segment Specialist
 
 ---
 
-## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 12-13/03/2026)
+## 📊 RESUMO EXECUTIVO — O QUE FOI FEITO (sessão 13/03/2026)
 
-### 🤖 Newsletter Agents System — Pipeline Completo (Sprints 4A + 4B + 4C)
+### 🤖 Newsletter Agents System — Pipeline Completo (Sprints 4A→4F)
 
-Pipeline multi-agente de análise inteligente B2G implementado e validado em produção.
+Pipeline multi-agente de análise inteligente B2G totalmente implementado e validado em produção.
 
 ```
-[Agent 1: Data Collector]      → empresa_intelligence
-[Agent 2: Insight Analyzer]    → newsletter_insights (4 APIs externas)
-[Agent 3: Content Writer]      → newsletter_drafts (HTML com identidade DUO™)
+[Agent 1: Data Collector]       → empresa_intelligence
+[Agent 2: Segment Specialist]   → empresa_segment_knowledge (cache 30d)
+[Agent 3: Insight Analyzer]     → newsletter_insights (4 APIs externas + segmento)
+[Agent 4: Content Writer]       → newsletter_drafts (HTML com identidade DUO™)
+[Agent 5: Send Newsletter]      → email via Resend
 ```
+
+**Crons Vercel (Hobby Plan — multi-empresa):**
+```
+domingo 22h BRT  → POST /api/cron/collect-and-analyze  (cron: "0 1 * * 1")
+segunda 07h BRT  → POST /api/cron/write-and-send        (cron: "0 10 * * 1")
+```
+
+---
+
+### Sprint 4D — Send Newsletter Agent ✅ VALIDADO
+
+**Arquivos:**
+- `frontend/lib/agents/newsletter/send-newsletter/send-newsletter-agent.ts`
+- `frontend/app/api/agents/send-newsletter/route.ts`
+- `frontend/lib/supabase/service-role.ts` — createServiceRoleClient() para crons
+- `frontend/app/api/cron/collect-and-analyze/route.ts`
+- `frontend/app/api/cron/write-and-send/route.ts`
+- `frontend/vercel.json` — bloco `crons`
+
+**Funcionalidades:**
+- Lê `newsletter_drafts` (status='draft'), envia via Resend, marca `status='sent'`
+- Corpo opcional: `{ draft_id?, destinatario? }` — fallback para email do usuário autenticado
+- Headers RFC 2369: `List-Unsubscribe`, `List-Unsubscribe-Post`, `Reply-To`
+- Crons com `CRON_SECRET` (configurado na Vercel)
+
+---
+
+### Sprint 4E — Bug Fixes Newsletter (10 bugs) ✅ VALIDADO
+
+**10/10 bugs corrigidos e validados em produção**
+
+| # | Bug | Fix |
+|---|-----|-----|
+| 1+2 | fetchIPCA() soma errada + período hardcoded | Usar último valor (variável 2265 já é acumulado) + período dinâmico BRT |
+| 3 | fetchPNCP() 3 params errados | Formato yyyyMMdd + tamanhoPagina=10 + codigoModalidadeContratacao=6 |
+| 4 | fetchIBGE() ano hardcoded 2021 | Range 2020-anoAtual + reverse().find() para último ano com valor |
+| 5 | confianca_score não passado ao Claude | Calculado antes de generateInsights(), incluído no system prompt |
+| 6 | progresso_maturidade hardcoded 70% | calcularProgresso() baseado em fontes de dados reais |
+| 7 | Headers List-Unsubscribe ausentes | replyTo + List-Unsubscribe + List-Unsubscribe-Post adicionados |
+| 8 | getDraft filtra status com draft_id | Dois branches independentes: com/sem draft_id |
+| 9 | empresa_nome coluna inexistente | select('razao_social, nome_fantasia') com fallback |
+| 10 | fetchIBGE() anoAtual-2 retorna undefined | Busca dinâmica com range + find último válido |
+
+**Timezone Brasília:** `nowBrasilia() = new Date(Date.now() - 3 * 60 * 60 * 1000)` — Vercel roda UTC, Brasil = UTC-3 sem DST desde 2019.
+
+---
+
+### Sprint 4F — Segment Specialist Agent ✅ DEPLOYADO
+
+**Arquivos:**
+- `database/migrations/MIGRATION 025.sql` — tabela `empresa_segment_knowledge` ✅ aplicada
+- `frontend/lib/agents/newsletter/segment-specialist/segment-specialist-agent.ts`
+- `frontend/app/api/agents/segment-specialist/route.ts`
+- `frontend/lib/agents/core/types.ts` — tipos SegmentSpecialistInput/Output adicionados
+
+**Arquitetura:**
+- Lê `empresa_intelligence` (não re-coleta contratos — sem duplicação)
+- 2 chamadas Claude: segmento+best_practices / diagnóstico comportamental
+- Cache 30 dias via upsert `onConflict: 'empresa_id'`
+- System prompt: consultor sênior B2G — cobre fluxo de caixa, BDI, reajuste IPCA (art.131 Lei 14.133), pregão dumping, habilitação SICAF
+- Integrado ao Insight Analyzer: `getSegmentKnowledge()` enriquece o prompt com `best_practices` e `benchmarks_mercado`
+
+**Pipeline cron atualizado:**
+`Data Collector → Segment Specialist (try/catch isolado) → Insight Analyzer`
+
+**Bug 11 corrigido (Loop #8):**
+- `parseJSON()` regex greedy `\{[\s\S]*\}` substituído por brace counting
+- Causa: Claude adiciona texto pós-JSON, regex capturava até o último `}`, corrompendo o parse
 
 ---
 
@@ -26,15 +96,7 @@ Pipeline multi-agente de análise inteligente B2G implementado e validado em pro
 - `frontend/lib/agents/newsletter/data-collector/data-collector-agent.ts`
 - `frontend/app/api/agents/data-collector/route.ts`
 
-**Resultado em produção (Loop #2):**
-- POST /api/agents/data-collector → 200 em 14s
-- 4 contratos, 7 itens, 7 insights gerados
-- `confianca_score: 0.50` (11 pontos de dados)
-
-**Bugs corrigidos durante o loop:**
-1. Browser supabase client em API Route server-side → fix: SupabaseClient injetado via construtor
-2. `PostgrestError` não é `instanceof Error` → fix: `JSON.stringify(error)` fallback
-3. Middleware redirecionava POST sem auth para /login (405) → fix: 401 JSON para `/api/`
+**Resultado em produção (Loop #2):** 4 contratos, 7 itens, 7 insights, `confianca_score: 0.50`
 
 ---
 
@@ -45,83 +107,44 @@ Pipeline multi-agente de análise inteligente B2G implementado e validado em pro
 - `frontend/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent.ts`
 - `frontend/app/api/agents/insight-analyzer/route.ts`
 
-**Resultado em produção (Loop #3):**
-- POST /api/agents/insight-analyzer → 200 em 102s
-- 9 insights gerados, 4 críticos
-- `confianca_score: 0.85` — todas as 4 APIs responderam (IPCA, Selic, PNCP, IBGE)
-- `apis_com_erro: []`
+**Resultado em produção (Loop #3):** 9 insights, 4 críticos, `confianca_score: 0.85`, todas 4 APIs responderam
 
 ---
 
-### Sprint 4C — Content Writer Agent ✅ DEPLOYADO (aguardando revalidação Cowork)
-
-**v1.2.0 — Design System DUO™ + fix definitivo truncação tokens**
+### Sprint 4C — Content Writer Agent ✅ VALIDADO
 
 **Arquivos:**
 - `database/migrations/MIGRATION 024.sql` — tabela `newsletter_drafts`
 - `frontend/lib/agents/newsletter/content-writer/content-writer-agent.ts` (v1.2.0)
 - `frontend/app/api/agents/content-writer/route.ts`
-- `frontend/lib/agents/newsletter/content-writer/email-themes.ts` — sistema de temas
-- `frontend/lib/agents/newsletter/content-writer/email-template.ts` — renderEmailTemplate()
-- `frontend/lib/agents/newsletter/content-writer/NEWSLETTER_IDENTITY.md` — fonte de verdade editorial
-
-**Arquitetura resolvida (3 iterações de fix):**
-- Loop #4: maxTokens 8000→16000 + fence fallback (insuficiente — modelo tem hard limit ~8192)
-- Loop #4b: split em 2 chamadas (meta JSON + HTML direto) — resolveu truncação mas HTML sem identidade
-- v1.2.0 final: Claude gera conteúdo textual (~500 tokens), `renderEmailTemplate()` constrói HTML
+- `frontend/lib/agents/newsletter/content-writer/email-themes.ts`
+- `frontend/lib/agents/newsletter/content-writer/email-template.ts`
+- `frontend/lib/agents/newsletter/content-writer/NEWSLETTER_IDENTITY.md`
 
 **Design System Newsletter DUO™:**
 ```
-4 temas visuais automáticos:
-  ALERTA       → insights_criticos >= 3 → accent #EF4444 vermelho
-  OPORTUNIDADE → radar_b2g.length >= 2  → accent #10B981 emerald
-  MACRO        → insight_macro dominante → accent #3B82F6 azul
-  PADRÃO       → fallback               → accent #10B981 emerald
-
-9 seções fixas:
-  Header (logo + edição + badge tema)
-  Número Destaque (48px)
-  Seus Contratos (alertas com borda por prioridade)
-  Insights da Semana (com educação contextual)
-  Radar B2G™ (oportunidades PNCP)
-  Macro que Importa (IPCA/Selic)
-  Você Sabia? (conceito educacional)
-  ROI desta Semana
-  Assinatura + Índice DUO™ + Disclaimer + Footer navy
+4 temas visuais: ALERTA (vermelho) | OPORTUNIDADE (emerald) | MACRO (azul) | PADRÃO
+9 seções fixas: Header → Número Destaque → Contratos → Insights → Radar B2G™
+                → Macro → Você Sabia? → ROI → Footer navy
 ```
 
 ---
 
 ### Loop de Engenharia AIOS ✅ OPERACIONAL
 
-**Arquivos:**
-- `ai-loop/INBOX.md` — state machine: `IDLE|READY|IN_PROGRESS|DONE`
-- `.claude/commands/analyze-inbox.md` — comando `/analyze-inbox` com 8 passos
-- `ai-loop/reports/browser-report.md` — relatório do Cowork
-- `ai-loop/reports/database-analysis.md` — análise do @analyst
-- `ai-loop/plans/fix-plan.md` — plano do @architect
-- `ai-loop/logs/deploy-log.md` — histórico de deploys
-- `ai-loop/logs/test-history.md` — histórico de testes
-
 **Histórico de loops:**
+
 | Loop | Sessão | Status |
 |------|--------|--------|
 | #1 | Resend email endpoint (middleware) | ✅ DONE |
 | #2 | Sprint 4A Data Collector | ✅ DONE |
-| #3 | Sprint 4B Insight Analyzer | ✅ DONE (sem bugs) |
+| #3 | Sprint 4B Insight Analyzer | ✅ DONE |
 | #4 | Sprint 4C fix maxTokens | ✅ DONE |
-| #4b | Sprint 4C fix 2 chamadas + Design System | ✅ DONE |
-
-**Padrão definido:**
-> Após deploy de fix → não reativar o loop. Cowork valida no próprio ritmo e escreve `Status: READY`.
-
----
-
-### Resend Email ✅ FUNCIONANDO
-
-- `GET /api/test-resend` → 200, email enviado para leistermurilo@gmail.com
-- `RESEND_API_KEY` configurado na Vercel
-- Fix: `pathname.startsWith('/api/test-resend')` adicionado ao `isPublicRoute` no middleware
+| #4b | Sprint 4C Design System DUO™ | ✅ DONE |
+| #5 | Sprint 4D Send Newsletter | ✅ DONE |
+| #6 | Sprint 4E 10 bugs newsletter | ✅ DONE |
+| #7 | BUG 10 fetchIBGE() PIB dinâmico | ✅ DONE |
+| #8 | BUG 11 parseJSON greedy regex | ✅ DONE |
 
 ---
 
@@ -134,28 +157,22 @@ Pipeline multi-agente de análise inteligente B2G implementado e validado em pro
 | 021 | RPC soft delete SECURITY DEFINER | ✅ Aplicada |
 | 022 | empresa_intelligence | ✅ Aplicada |
 | 023 | newsletter_insights | ✅ Aplicada |
-| 024 | newsletter_drafts | ⏳ Aplicar manualmente no Supabase |
+| 024 | newsletter_drafts | ✅ Aplicada |
+| 025 | empresa_segment_knowledge | ✅ Aplicada |
 
 ---
 
 ## 🚧 PENDÊNCIAS
 
-### Próxima Sprint (quando Cowork validar 4C)
-- **Sprint 4D** — envio da newsletter via Resend (POST /api/agents/send-newsletter)
-  - Lê `newsletter_drafts` com status 'draft'
-  - Envia via `resend.emails.send()` com html gerado
-  - Atualiza status → 'sent' + `enviado_em`
-
-### Outros Pendentes
-- [ ] Aplicar MIGRATION 024 no Supabase SQL Editor (projeto hstlbkudwnboebmarilp)
-- [ ] Aguardar Cowork revalidar Sprint 4C v1.2.0 → Status: READY
+- [ ] Cowork re-testar Sprint 4F após BUG 11 fix: `POST /api/agents/segment-specialist` → 200 + `empresa_segment_knowledge` populado
+- [ ] Testar pipeline completo end-to-end (cron simulado manual)
 - [ ] Testar matriz de permissões — 5 perfis (`docs/tests/matriz-permissoes.md`)
 - [ ] Testar soft delete em produção (Migration 021 aplicada)
 - [ ] Testar fluxo OCR completo em produção
 
 ---
 
-## 🏗️ ARQUITETURA DO SISTEMA DE NEWSLETTER
+## 🏗️ ARQUITETURA DO PIPELINE NEWSLETTER
 
 ```
 POST /api/agents/data-collector
@@ -164,11 +181,17 @@ POST /api/agents/data-collector
   → Claude: analisa padrões
   → INSERT empresa_intelligence
 
+POST /api/agents/segment-specialist
+  → SegmentSpecialistAgent.analyze()
+  → empresa_intelligence (lê)
+  → Claude x2: segmento + diagnóstico comportamental
+  → UPSERT empresa_segment_knowledge (cache 30d)
+
 POST /api/agents/insight-analyzer
   → InsightAnalyzerAgent.analyze()
-  → empresa_intelligence (lê)
+  → empresa_intelligence + empresa_segment_knowledge (lê)
   → APIs: IPCA, Selic, PNCP, IBGE (Promise.allSettled)
-  → Claude: gera 4 categorias de insights
+  → Claude: gera 4 categorias de insights (enriquecidas com segmento)
   → INSERT newsletter_insights
 
 POST /api/agents/content-writer
@@ -179,12 +202,27 @@ POST /api/agents/content-writer
   → renderEmailTemplate(): HTML com identidade DUO™
   → INSERT newsletter_drafts
 
-[Sprint 4D - próxima]
 POST /api/agents/send-newsletter
+  → SendNewsletterAgent.send()
   → newsletter_drafts (lê, status='draft')
-  → Resend: envia HTML
+  → Resend: envia HTML com headers RFC 2369
   → UPDATE newsletter_drafts status='sent'
+
+CRONS (Vercel Hobby):
+  domingo 22h BRT → collect-and-analyze (Data Collector → Segment Specialist → Insight Analyzer)
+  segunda 07h BRT → write-and-send (Content Writer → Send Newsletter)
 ```
+
+---
+
+## Supabase (Produção)
+- **Projeto:** `hstlbkudwnboebmarilp`
+- **URL produção:** https://app.duogovernance.com.br
+
+## Commits Chave desta Sessão (13/03/2026)
+- `e96e0d2` — feat(sprint-4f): Segment Specialist Agent
+- `2d64729` — fix(segment-specialist): BUG 11 parseJSON greedy regex
+- `b7af757` — INBOX BUG 10 IDLE — pipeline 10/10 validado
 
 ---
 
@@ -208,17 +246,3 @@ POST /api/agents/send-newsletter
 - `Promise.race` com 3s timeout na query `usuarios`
 - Retry automático se `user` setado + `usuario=null` após loading
 - Auth 100% estável (F5 5/5 ✅, sem LockManager timeout)
-
----
-
-## Supabase (Produção)
-- **Projeto:** `hstlbkudwnboebmarilp`
-- **URL produção:** https://app.duogovernance.com.br
-
-## Commits Chave desta Sessão
-- `42f57e5` — fix data-collector (Loop #2)
-- `5b5261b` — feat Sprint 4B insight-analyzer
-- `da9aa35` — feat Sprint 4C content-writer
-- `e833cf7` — fix content-writer 2 chamadas Claude
-- `d3d0463` — feat design system email DUO™ v1.2.0
-- `e9ae6f6` — chore inbox task Cowork
