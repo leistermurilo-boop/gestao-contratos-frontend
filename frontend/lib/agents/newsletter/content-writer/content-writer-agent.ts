@@ -173,10 +173,11 @@ export class ContentWriterAgent {
   private async getEmpresaNome(empresa_id: string): Promise<string> {
     const { data } = await this.supabase
       .from('empresas')
-      .select('nome')
+      .select('razao_social, nome_fantasia')
       .eq('id', empresa_id)
       .single()
-    return (data as { nome?: string } | null)?.nome ?? 'sua empresa'
+    const d = data as { razao_social?: string; nome_fantasia?: string } | null
+    return d?.nome_fantasia ?? d?.razao_social ?? 'sua empresa'
   }
 
   private async getProximaEdicao(empresa_id: string): Promise<number> {
