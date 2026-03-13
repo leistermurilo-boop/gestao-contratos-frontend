@@ -94,7 +94,9 @@ export class ContentWriterAgent {
         has_macro_dominante: Array.isArray(insights.insights_macro) && (insights.insights_macro as unknown[]).length > 0,
       })
 
-      const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+      // Hora de Brasília (Vercel roda em UTC — UTC-3 sem horário de verão desde 2019)
+      const nowBRT = new Date(Date.now() - 3 * 60 * 60 * 1000)
+      const hoje = nowBRT.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' })
 
       const templateParams: EmailTemplateParams = {
         tema,
@@ -351,7 +353,7 @@ RETORNE:
       .insert({
         empresa_id,
         insights_id,
-        periodo_referencia: new Date().toISOString().split('T')[0],
+        periodo_referencia: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0],
         subject: newsletter.subject,
         preview_text: newsletter.preview_text,
         html: newsletter.html,

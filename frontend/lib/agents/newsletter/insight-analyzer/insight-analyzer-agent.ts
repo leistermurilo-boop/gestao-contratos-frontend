@@ -14,6 +14,21 @@ import type { InsightAnalyzerInput, InsightAnalyzerOutput } from '@/lib/agents/c
  * APIs com fallback via Promise.allSettled — falha parcial não para o agent.
  */
 
+// === TIMEZONE BRASÍLIA ===
+
+/**
+ * Retorna a data atual no fuso de Brasília (BRT = UTC-3, sem horário de verão desde 2019).
+ * Servidores Vercel rodam em UTC — sem este ajuste, datas ficam 3h adiantadas.
+ */
+function nowBrasilia(): Date {
+  return new Date(Date.now() - 3 * 60 * 60 * 1000)
+}
+
+/** Formata Date como 'YYYY-MM-DD' usando hora de Brasília */
+function dateBrasilia(d: Date): string {
+  return d.toISOString().split('T')[0]
+}
+
 // === TIPOS INTERNOS ===
 
 interface IPCAData {
@@ -161,10 +176,10 @@ export class InsightAnalyzerAgent {
   }
 
   private async fetchIPCA(): Promise<IPCAData> {
-    // BUG 2 fix: período dinâmico (não hardcoded em 2024)
-    const now = new Date()
-    const anoAtual = now.getFullYear()
-    const mesAtual = String(now.getMonth() + 1).padStart(2, '0')
+    // BUG 2 fix: período dinâmico — usa hora de Brasília (Vercel roda em UTC)
+    const now = nowBrasilia()
+    const anoAtual = now.getUTCFullYear()
+    const mesAtual = String(now.getUTCMonth() + 1).padStart(2, '0')
     const periodoInicio = `${anoAtual}01`
     const periodoFim = `${anoAtual}${mesAtual}`
 
@@ -205,8 +220,9 @@ export class InsightAnalyzerAgent {
     if (!materiais?.length) return []
 
     const top3 = materiais.slice(0, 3)
-    const hoje = new Date().toISOString().split('T')[0]
-    const em30dias = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+    // Datas em hora de Brasília (evita erro de dia na virada meia-noite UTC)
+    const hoje = dateBrasilia(nowBrasilia())
+    const em30dias = dateBrasilia(new Date(nowBrasilia().getTime() + 30 * 86400000))
     const resultados: PNCPEdital[] = []
 
     for (const material of top3) {
@@ -252,8 +268,8 @@ export class InsightAnalyzerAgent {
   }
 
   private async fetchIBGE(): Promise<IBGEData[]> {
-    // BUG 4 fix: PIB tem defasagem de ~2 anos — usar anoAtual - 2 dinamicamente
-    const anoRef = new Date().getFullYear() - 2
+    // BUG 4 fix: PIB tem defasagem de ~2 anos — usar anoAtual - 2 dinamicamente (hora Brasília)
+    const anoRef = nowBrasilia().getUTCFullYear() - 2
     const res = await fetch(
       `https://servicodados.ibge.gov.br/api/v3/agregados/5938/periodos/${anoRef}/variaveis/37?localidades=N1[all]`,
       { signal: AbortSignal.timeout(8000) }
@@ -392,7 +408,7 @@ RETORNE exatamente este JSON:
     const { error } = await this.supabase.from('newsletter_insights').insert({
       empresa_id,
       intelligence_id,
-      periodo_referencia: new Date().toISOString().split('T')[0],
+      periodo_referencia: dateBrasilia(nowBrasilia()),
       insights_precificacao: insights.insights_precificacao,
       insights_radar_b2g: insights.insights_radar_b2g,
       insights_macro: insights.insights_macro,
