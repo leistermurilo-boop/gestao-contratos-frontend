@@ -16,17 +16,23 @@ Status: DONE
 ## Ultimo Report
 
 **Data:** 2026-03-12
-**Sessao:** Loop #4b — Sprint 4C fix definitivo (2 chamadas Claude)
-**Commit fix:** e833cf7
+**Sessao:** Loop #4b + Design System — Sprint 4C v1.2.0
+**Commit:** d3d0463
 
-## Task para Cowork — Revalidar Sprint 4C (fix definitivo)
+## Task para Cowork — Validar Sprint 4C v1.2.0 (design system + fix definitivo)
 
-Fix deployado. Revalidar:
+Deploy completo. Validar:
 
-1. POST autenticado para `/api/agents/content-writer` → esperado HTTP 200 + `{ draft_id, subject }`
-2. Verificar `newsletter_drafts` no Supabase com HTML completo
-3. HTML deve conter: alertas críticos, insights da semana, Radar B2G, disclaimer
-4. POST sem autenticação → HTTP 401
+1. POST autenticado `/api/agents/content-writer` → HTTP 200 + `{ draft_id, subject }`
+2. `newsletter_drafts` populada com HTML completo
+3. HTML deve ter identidade DUO™:
+   - Header navy com logo + badge de tema (⚠️ / 🎯 / 📊)
+   - Número destaque em 48px
+   - Cards com borda colorida por prioridade
+   - Seções: Contratos, Insights, Radar B2G, Macro, Educação, ROI
+   - Disclaimer amarelo + Footer navy
+4. Tema aplicado automaticamente (ALERTA / OPORTUNIDADE / MACRO / PADRÃO)
+5. POST sem autenticação → HTTP 401
 
 ---
 
@@ -34,9 +40,10 @@ Fix deployado. Revalidar:
 
 | Data | Sessão | Status | Ciclo |
 |------|--------|--------|-------|
+| 2026-03-12 | Loop #4b + Design System — Sprint 4C v1.2.0 | DONE | @uma + analyst → architect → dev → qa |
 | 2026-03-12 | Loop #4b — Sprint 4C fix 2 chamadas Claude | DONE | analyst → architect → dev → qa |
 | 2026-03-12 | Loop #4 — Sprint 4C fix maxTokens + JSON fence | DONE | analyst → architect → dev → qa |
-| 2026-03-12 | Loop #3 — Sprint 4B Insight Analyzer | DONE | sem bugs — aprovado direto |
+| 2026-03-12 | Loop #3 — Sprint 4B Insight Analyzer | DONE | sem bugs |
 | 2026-03-12 | Loop #2 — Sprint 4A Data Collector | DONE | analyst → architect → dev → qa |
 | 2026-03-12 | Loop #1 — Resend email endpoint | DONE | analyst → architect → dev → qa |
 
