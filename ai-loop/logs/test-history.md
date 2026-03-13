@@ -17,6 +17,14 @@
 
 ## Histórico
 
+### [2026-03-12] — Sprint 4C fix definitivo — 2 chamadas Claude (Cowork loop #4b)
+| Cenário | Perfil | Resultado | Notas |
+|---------|--------|-----------|-------|
+| POST → 500 com maxTokens 16000 (antes do fix) | admin | ❌ | modelo tem hard limit ~8192 tokens output |
+| Split: Chamada 1 metadados JSON ~300 tokens | — | ✅ | dentro do limite |
+| Split: Chamada 2 HTML body direto ~3000 tokens | — | ✅ | sem JSON wrapper |
+| Montagem NewsletterHTML local | — | ✅ | sem chamada Claude extra |
+
 ### [2026-03-12] — Sprint 4C Content Writer Agent fix (Cowork loop #4)
 | Cenário | Perfil | Resultado | Notas |
 |---------|--------|-----------|-------|
