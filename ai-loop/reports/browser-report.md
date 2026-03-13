@@ -1,62 +1,126 @@
-# Browser Report — BUG 10 FINAL
-
+# Browser Report — Sprint 4F Segment Specialist Agent
 **Data:** 2026-03-13
-**Sessao:** Loop #7 — BUG 10 fetchIBGE() offset dinamico
-**Ambiente:** Producao — https://app.duogovernance.com.br
-**Validado por:** Cowork (browser-qa-tester)
+**Sessao:** Loop #8 Sprint 4F — Segment Specialist Agent (BUG 11 encontrado)
+**Ambiente:** https://app.duogovernance.com.br (Vercel + Supabase producao)
+**Commit testado:** e96e0d288c9e0477b85f0e48b8dbf085a0ae6b28
 
 ---
 
-## Resultado
+## Resumo
 
-APROVADO ✅ — BUG 10 corrigido e validado em producao.
+Sprint 4F implementou o **Segment Specialist Agent** — novo agente que gera knowledge base B2G por empresa com 2 chamadas Claude (analise de segmento + diagnostico comportamental) e persiste em `empresa_segment_knowledge`.
 
----
-
-## Cenário — POST /api/agents/insight-analyzer
-
-**Test Scenario:** Verificar que PIB nao retorna undefined apos fix do offset dinamico no fetchIBGE().
-
-**Steps Performed:**
-1. POST /api/agents/insight-analyzer via fetch (~112s)
-2. Verificou resposta: success=true, apis_com_erro=[]
-3. Confirmou novo registro no newsletter_insights (id: 08c31291, gerado_em: 2026-03-13 15:13:00)
-4. Chamou IBGE API diretamente com range dinamico (2021-2026) para verificar logica do fix
-5. Confirmou valor retornado: ano=2023, valor=10943345439
-
-**Expected Result:**
-- apis_com_erro: [] (PIB nao falha mais silenciosamente)
-- PIB: ano=2023, valor=10943345439 (R$10.94T — ultimo disponivel no IBGE)
-
-**Actual Result:**
-- success=true, apis_com_erro=[] ✅
-- IBGE range 2021-2026 retornou: anos disponíveis [2021, 2022, 2023]
-- Logica reverse().find() identificou: ano=2023, valor=10943345439 ✅
-- Novo insight gerado com sucesso as 15:13 ✅
-
-**Console Errors:** Nenhum
-**Network Errors:** Nenhum
-**Database Errors:** Nenhum
-
-**Root Cause Hypothesis:** Resolvido — fix correto aplicado.
-**Suggested Fix Direction:** N/A
-**Reproducibility:** Passou ✅
-**Severity:** N/A
+**Resultado:** 1 bug critico encontrado (BUG 11). Insight-analyzer e pipeline nao testados pois o prerequisito (segment-specialist) falhou.
 
 ---
 
-## Historico de Bugs — Pipeline Newsletter (completo)
+## Cenarios de Teste
 
-| # | Bug | Arquivo | Status |
-|---|-----|---------|--------|
-| 1+2 | fetchIPCA() soma errada + periodo hardcoded | insight-analyzer | CORRIGIDO ✅ |
-| 3 | fetchPNCP() 3 params errados | insight-analyzer | CORRIGIDO ✅ |
-| 4 | fetchIBGE() ano 2021 hardcoded | insight-analyzer | CORRIGIDO ✅ |
-| 5 | confianca_score nao passado ao Claude | insight-analyzer | CORRIGIDO ✅ |
-| 6 | progresso_maturidade hardcoded 70% | content-writer | CORRIGIDO ✅ |
-| 7 | Faltam headers List-Unsubscribe + replyTo | send-newsletter | CORRIGIDO ✅ |
-| 8 | getDraft filtra status mesmo com draft_id | send-newsletter | CORRIGIDO ✅ |
-| 9 | empresa_nome coluna inexistente | content-writer | CORRIGIDO ✅ |
-| 10 | fetchIBGE() anoAtual-2 retorna undefined | insight-analyzer | CORRIGIDO ✅ |
+### CENARIO 1: POST /api/agents/segment-specialist
+**Status: FALHOU (500)**
 
-**Score Final: 10/10 bugs corrigidos e validados** 🎉
+**Request:**
+```
+POST https://app.duogovernance.com.br/api/agents/segment-specialist
+Content-Type: application/json
+(sem body — empresa_id lido da sessao autenticada)
+```
+
+**Response:**
+```json
+{
+  "error": "Expected ',' or '}' after property value in JSON at position 6309 (line 50 column 4)"
+}
+```
+- HTTP Status: 500
+- Tempo de resposta: 50621ms (50s — 2 chamadas Claude completadas)
+- As chamadas Claude foram feitas (tempo confirma), mas o parse do resultado falhou
+
+### CENARIO 2: empresa_segment_knowledge no Supabase
+**Status: NAO TESTADO** — dependente do Cenario 1 (upsert so ocorre apos parse bem-sucedido)
+
+### CENARIO 3: insight-analyzer com getSegmentKnowledge()
+**Status: NAO TESTADO** — dependente do Cenario 1
+
+---
+
+## Root Cause — BUG 11
+
+**Arquivo:** `frontend/lib/agents/newsletter/segment-specialist/segment-specialist-agent.ts`
+**Metodo:** `parseJSON()` linha 377-386
+**Funcao afetada:** `analyzeSegment()` ou `analyzeBehavior()`
+
+**Codigo atual (BUGADO):**
+```typescript
+private parseJSON<T>(content: string, caller: string): T {
+  const fence = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const raw = fence ? fence[1].trim() : content
+  const match = raw.match(/\{[\s\S]*\}/)   // <-- GREEDY: captura 1o { ate ultimo }
+  if (!match) throw new Error(`Claude nao retornou JSON valido em ${caller}`)
+  return JSON.parse(match[0]) as T
+}
+```
+
+**Problema:** O regex `/\{[\s\S]*\}/` e GREEDY. Captura desde o primeiro `{` ate o **ultimo** `}` na string inteira. Se Claude adicionar qualquer texto apos o JSON que contenha `{...}` (ex: notas explicativas, exemplos inline), o regex inclui esse conteudo invalido. O JSON resultante quebra no parse (posicao 6309 = ~50 linhas de JSON valido seguido de lixo).
+
+**Fix correto — brace counting:**
+```typescript
+private parseJSON<T>(content: string, caller: string): T {
+  // 1. Tenta extrair de code fence
+  const fence = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fence) {
+    try { return JSON.parse(fence[1].trim()) as T } catch {}
+  }
+
+  // 2. Brace counting — encontra JSON balanceado sem regex greedy
+  const start = content.indexOf('{')
+  if (start === -1) throw new Error(`Claude nao retornou JSON valido em ${caller}`)
+
+  let depth = 0, end = -1
+  for (let i = start; i < content.length; i++) {
+    if (content[i] === '{') depth++
+    else if (content[i] === '}') {
+      depth--
+      if (depth === 0) { end = i; break }
+    }
+  }
+
+  if (end === -1) throw new Error(`JSON nao fechado em ${caller}`)
+
+  try {
+    return JSON.parse(content.slice(start, end + 1)) as T
+  } catch (e) {
+    console.error(`[SegmentSpecialistAgent.${caller}] parse error:`, content.slice(start, start+300))
+    throw e
+  }
+}
+```
+
+---
+
+## Console / Network Errors
+
+- Sem erros de autenticacao (sessao valida, cookies ativos)
+- Sem erros 401/403 (middleware ok)
+- Erro 500 originado dentro do agente (catch no route handler)
+- Supabase nao consultado (erro antes do upsert)
+
+---
+
+## Evidencias
+
+- fetch('https://app.duogovernance.com.br/api/agents/segment-specialist', {method:'POST'})
+  - status=500, elapsed=50621ms
+  - body={"error":"Expected ',' or '}' after property value in JSON at position 6309 (line 50 column 4)"}
+- Tempo de 50s confirma que ambas as chamadas Claude completaram com sucesso
+- Erro ocorre em parseJSON() — apos receber resposta do Claude, antes de salvar no Supabase
+
+---
+
+## Score Sprint 4F
+
+- Cenario 1 (segment-specialist): FALHOU — BUG 11 parseJSON greedy regex
+- Cenario 2 (empresa_segment_knowledge): NAO TESTADO
+- Cenario 3 (insight-analyzer + segment): NAO TESTADO
+
+**Acao necessaria:** Terminal corrigir parseJSON() com brace counting. Redeployar. Cowork re-testar.
