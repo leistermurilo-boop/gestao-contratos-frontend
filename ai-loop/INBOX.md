@@ -16,20 +16,19 @@ Status: IDLE
 ## Ultimo Report
 
 **Data:** 2026-03-13
-**Sessão:** Sprint 4C FINAL — Content Writer Agent ✅ APROVADO
-**Commit browser-report:** Revise browser report for Sprint 4C final results
+**Sessão:** Sprint 4D FINAL — Send Newsletter Agent ✅ APROVADO
+**Commit browser-report:** Revise browser report for Sprint 4D Send Newsletter
 
-## Resultado Sprint 4C
+## Resultado Sprint 4D
 
 Todos os 4 cenários passaram:
 
-1. POST autenticado → HTTP 200 + draft_id ✅
-2. newsletter_drafts populada com HTML (19186 bytes) ✅
-3. HTML contém alertas críticos + insights da semana + Radar B2G ✅
+1. POST autenticado → HTTP 200 + resend_id ✅
+2. newsletter_drafts status='sent' + enviado_em + enviado_para ✅
+3. draft_id + destinatario custom aceito ✅
 4. POST sem auth → HTTP 401 "Não autenticado" ✅
 
-Fix definitivo aplicado: generateNewsletter dividido em 2 chamadas Claude
-(Call 1: metadata JSON ~300 tokens, Call 2: HTML string ~3000-5000 tokens)
-Resolveu o limite ~8192 tokens de output do claude-sonnet-4-6.
+Pipeline completo validado em produção:
+Data Collector → Insight Analyzer → Content Writer → Send Newsletter ✅
 
-**Sprint 4C: CONCLUÍDA. Loop encerrado.**
+**Sprint 4D: CONCLUÍDA. Loop encerrado.**
