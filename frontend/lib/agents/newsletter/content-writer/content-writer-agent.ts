@@ -40,7 +40,7 @@ export class ContentWriterAgent {
   constructor(private supabase: SupabaseClient) {
     this.claudeClient = new ClaudeClient({
       model: 'claude-sonnet-4-6',
-      maxTokens: 8000,
+      maxTokens: 16000,
       temperature: 0.6,
     })
   }
@@ -206,8 +206,14 @@ RETORNE exatamente este JSON:
 }`,
     })
 
-    const jsonMatch = response.content.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('Claude não retornou JSON válido')
+    let rawContent = response.content
+    const fenceMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (fenceMatch) rawContent = fenceMatch[1].trim()
+    const jsonMatch = rawContent.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error('[ContentWriterAgent] Claude raw:', rawContent.substring(0, 500))
+      throw new Error('Claude não retornou JSON válido')
+    }
     return JSON.parse(jsonMatch[0]) as NewsletterHTML
   }
 
