@@ -1,84 +1,149 @@
-# Browser Report — Sprint 4D FINAL: Send Newsletter Agent ✅ APROVADO
+# Browser Report — Sprint 4E FINAL
 
-## Environment
-- Date: 2026-03-13
-- Tester: Cowork (Claude)
-- Environment: Production (Vercel)
-- App URL: https://app.duogovernance.com.br
-
-## Implementação Sprint 4D
-Commit: feat: Sprint 4D — send-newsletter agent via Resend
-
-- POST /api/agents/send-newsletter
-- Lê newsletter_drafts (status='draft'), mais recente por empresa
-- Suporta draft_id e destinatario opcionais no body
-- Fallback destinatario: email do usuário autenticado
-- Envia via Resend com from newsletter@duogovernance.com.br
-- Atualiza status → 'sent' + enviado_em + enviado_para
-
-Pipeline completo: Data Collector → Insight Analyzer → Content Writer → Send Newsletter
+**Data:** 2026-03-13
+**Sessão:** Sprint 4E — Validação pós-fix de 9 bugs nos agentes newsletter
+**Ambiente:** Produção — https://app.duogovernance.com.br
+**Validado por:** Cowork (ai-production-debugger + browser-qa-tester)
 
 ---
 
-## Cenário 1 — POST autenticado → HTTP 200 + resend_id ✅ PASSOU
+## Resultado Geral
 
-**Request:** POST /api/agents/send-newsletter
-- draft_id: 408e6b52-a08d-4b95-ba2b-9cf2a0de96dd
-- credentials: include
-
-**Response:**
-- Status: HTTP 200
-- success: true
-- resend_id: 82c160e5-513e-4f96-a26f-f174fc7cf248
-- destinatario: leistermurilo@gmail.com
-- subject: "4 alertas críticos + R$ 231K em margem recuperável"
-- tempo_processamento_ms: 1067
-- Tempo total: ~2.9s
+APROVADO — 4 cenários testados, todos passaram.
+1 sub-bug novo identificado (PIB ano offset) — documentado abaixo.
 
 ---
 
-## Cenário 2 — newsletter_drafts atualizado para 'sent' no Supabase ✅ PASSOU
+## Cenário 1 — POST /api/agents/insight-analyzer
 
-**Query:** SELECT id, subject, status, enviado_em, enviado_para FROM newsletter_drafts WHERE id = '408e6b52...'
+**Test Scenario:** Verificar IPCA correto (~3.81%), PNCP retornando editais, PIB dinâmico, confianca_score passado ao Claude.
 
-**Resultado:**
-- status: sent ✅
-- enviado_em: 2026-03-13 10:23:40.788
-- enviado_para: leistermurilo@gmail.com
+**Steps Performed:**
+1. POST /api/agents/insight-analyzer via fetch no browser
+2. Aguardou resposta (~97s)
+3. Verificou IPCA diretamente via fetch à API IBGE (variável 2265)
+4. Verificou PNCP via fetch direto com params corrigidos
+5. Verificou newsletter_insights no Supabase (confianca_score, gerado_em)
+
+**Expected Result:**
+- IPCA: ~3.81% (último valor, não soma)
+- PNCP: mais de 0 editais com params yyyyMMdd + tamanhoPagina=10 + codigoModalidade
+- PIB: ano dinâmico disponível
+- confianca_score: salvo no banco
+
+**Actual Result:**
+- success: true, apis_com_erro: [] ✅
+- IPCA live: ultimoValor=3.81, ultimoMes=202602, periodo=202601-202603 ✅ (BUG 1+2 CORRIGIDO)
+  - Soma errada que seria: 8.25% — confirmado que NAO está sendo usada
+- PNCP live: total=978, count=10, error=none ✅ (BUG 3 CORRIGIDO)
+- confianca_score: 0.85 salvo no newsletter_insights ✅ (BUG 5 CORRIGIDO)
+- PIB 2024 (anoAtual-2): undefined ⚠️ — dado não disponível ainda no IBGE
+  - PIB disponível: 2020, 2021, 2022, 2023 apenas
+  - anoAtual-2 = 2024 retorna vazio — precisa ser anoAtual-3 ou fallback dinâmico
+  - NOVO BUG 10 ENCONTRADO: PIB offset incorreto
+
+**Console Errors:** Nenhum
+**Network Errors:** Nenhum (todas as APIs responderam 200)
+**Database Errors:** Nenhum
+
+**Root Cause Hypothesis (sub-bug PIB):** Terminal usou anoAtual - 2 como offset, mas IBGE publica PIB com defasagem de 2-3 anos. Em março de 2026, o dado de 2024 ainda não foi publicado. O offset correto seria anoAtual - 3 ou buscar o último ano disponível dinamicamente.
+
+**Suggested Fix Direction:** Alterar fetchIBGE() para buscar range e pegar último ano com valor não-nulo:
+  const url = periodos/2021-2026
+  const ultimo = Object.entries(serie).reverse().find(([,v]) => v && v !== '-')
+
+**Reproducibility:** Sempre
+**Severity:** MÉDIO — PIB retorna undefined mas o resto do agente funciona (Promise.allSettled)
 
 ---
 
-## Cenário 3 — POST com draft_id + destinatario custom ✅ PASSOU
+## Cenário 2 — POST /api/agents/content-writer
 
-**Request:** POST com body { draft_id: "408e6b52...", destinatario: "leistermurilo@gmail.com" }
+**Test Scenario:** Verificar nome da empresa correto no conteúdo da newsletter (não mais null).
 
-**Response:**
-- Status: HTTP 200
-- success: true
-- resend_id: d4660cd9-dade-4d95-821c-23ceb1d9d2a9 (novo ID — enviou de novo)
-- destinatario: leistermurilo@gmail.com (custom aceito)
-- tempo_processamento_ms: 1088
+**Steps Performed:**
+1. POST /api/agents/content-writer via fetch
+2. Aguardou resposta (~51s)
+3. Consultou newsletter_drafts gerado (id: 813e2ea7...)
+4. Buscou "MGL" e percentuais no HTML via regexp_matches
+
+**Expected Result:**
+- Nome da empresa aparece corretamente (ex: "MGL")
+- progresso_maturidade não é hardcoded em 70%
+
+**Actual Result:**
+- Nome "MGL" encontrado no HTML: "a MGL poderia adicionar R$ 350.000..." ✅ (BUG 9 CORRIGIDO)
+- Draft gerado, subject: "4 alertas críticos + R$ 75,3K recuperáveis esta semana" ✅
+- Percentuais no HTML: 0%, 100%, 81%, 46%, 15%, 17% — nenhum "70%" hardcoded ✅ (BUG 6 CORRIGIDO)
+
+**Console Errors:** Nenhum
+**Network Errors:** Nenhum
+**Database Errors:** Nenhum
+
+**Reproducibility:** Passou ✅
+**Severity:** N/A
 
 ---
 
-## Cenário 4 — POST sem autenticação → HTTP 401 ✅ PASSOU
+## Cenário 3 — POST /api/agents/send-newsletter
 
-**Request:** POST /api/agents/send-newsletter sem cookies (credentials: omit)
+**Test Scenario:** Verificar envio com draft_id específico (mesmo quando status=sent), email enviado com sucesso.
 
-**Response:**
-- Status: HTTP 401
-- Body: {"error":"Não autenticado"}
+**Steps Performed:**
+1. POST /api/agents/send-newsletter com draft_id: 813e2ea7 e destinatario: leistermurilo@gmail.com
+2. Verificou resposta com resend_id
+3. Verificou Supabase: status=sent, enviado_em, enviado_para
+4. BUG 8 test: Reenviou mesmo draft_id (status já=sent) para confirmar que getDraft não bloqueia
+5. Verificou segundo resend_id gerado com sucesso
+
+**Expected Result:**
+- Email enviado (resend_id retornado)
+- status=sent + enviado_em + enviado_para atualizado
+- Reenvio por draft_id funciona mesmo com status=sent
+
+**Actual Result:**
+- 1º envio: resend_id=6b062993-828d-443c-a3b4-82bb114d483c ✅
+- Supabase: status=sent, enviado_em=2026-03-13 14:58:20, enviado_para=leistermurilo@gmail.com ✅ (BUG 7 CORRIGIDO)
+- 2º envio (status já=sent): resend_id=5cae540b-1cb4-4ce2-b6a0-42a5ecc0dfde ✅ (BUG 8 CORRIGIDO)
+  - getDraft com draft_id encontra o draft independente do status
+
+**Console Errors:** Nenhum
+**Network Errors:** Nenhum
+**Database Errors:** Nenhum
+
+**Reproducibility:** Passou ✅
+**Severity:** N/A
 
 ---
 
-## Resultado Final
+## Cenário 4 — Progresso Maturidade dinâmico
 
-| Cenário | Descrição | Status |
-|---------|-----------|--------|
-| 1 | POST autenticado → 200 + resend_id | ✅ PASSOU |
-| 2 | newsletter_drafts status='sent' + enviado_em | ✅ PASSOU |
-| 3 | draft_id + destinatario custom funcionando | ✅ PASSOU |
-| 4 | POST sem auth → 401 | ✅ PASSOU |
+Validado em conjunto com Cenário 2.
+Percentuais variados no HTML (0%, 81%, 46%) — "70%" hardcoded não existe mais ✅ (BUG 6 CORRIGIDO)
 
-**Sprint 4D: APROVADO — Pipeline completo funcionando em produção.**
-**Data Collector → Insight Analyzer → Content Writer → Send Newsletter ✅**
+---
+
+## Resumo Final
+
+| # | Bug | Status |
+|---|-----|--------|
+| 1+2 | fetchIPCA() — soma para último + período dinâmico | CORRIGIDO ✅ |
+| 3 | fetchPNCP() — 3 params (data, tamanho, modalidade) | CORRIGIDO ✅ |
+| 4 | fetchIBGE() — ano offset dinâmico | PARCIAL ⚠️ (2024 indisponível, precisa -3) |
+| 5 | confianca_score no Claude context | CORRIGIDO ✅ |
+| 6 | progresso_maturidade calculado | CORRIGIDO ✅ |
+| 7 | Send Newsletter headers email | CORRIGIDO ✅ |
+| 8 | getDraft por draft_id ignora status | CORRIGIDO ✅ |
+| 9 | empresa_nome razao_social/nome_fantasia | CORRIGIDO ✅ |
+
+Score: 8/9 fixes validados — 1 sub-bug residual no PIB offset
+
+---
+
+## Novo Bug Identificado — BUG 10
+
+**Arquivo:** frontend/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent.ts
+**Problema:** anoAtual - 2 = 2024 retorna undefined — IBGE não publicou 2024 ainda
+**Anos disponíveis confirmados:** 2020, 2021, 2022, 2023 (último = 2023 = R$10.94T)
+**Fix sugerido:** Buscar range e pegar último ano com valor definido em vez de offset fixo
+**Severidade:** MÉDIO — agente não falha, PIB fica undefined mas outros dados funcionam
