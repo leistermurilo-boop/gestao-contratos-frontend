@@ -7,62 +7,39 @@
 
 ## Estado Atual
 
-**Status: DONE**
+**Status: READY**
 
 ---
 
-## Loop #8 — Sprint 4F BUG 11
+## Loop #9 — Sprint 4F BUG 12
 
 **Data:** 2026-03-13
-**Sessao:** Sprint 4F — Segment Specialist Agent
-**Commit testado:** e96e0d288c9e0477b85f0e48b8dbf085a0ae6b28
 
-### BUG 11 — parseJSON() greedy regex causa 500 em segment-specialist
+### BUG 12 — maxTokens: 2000 trunca resposta Claude em segment-specialist
 
 **Arquivo:** `frontend/lib/agents/newsletter/segment-specialist/segment-specialist-agent.ts`
-**Metodo:** `parseJSON()` linha ~380
+**Linha 138:** `new ClaudeClient({ ..., maxTokens: 2000 })`
 
-**Codigo atual (BUGADO):**
+**Erro em producao:**
+POST /api/agents/segment-specialist → status=500, elapsed=52137ms
+`{"error":"JSON nao fechado em analyzeSegment"}`
+
+**Causa:** 2000 tokens insuficiente para os JSON templates grandes das 2 chamadas Claude.
+A resposta e truncada antes do fechamento do JSON. O brace counter (fix correto BUG 11)
+detecta corretamente que o JSON esta incompleto.
+
+**Fix — 1 linha:**
 ```typescript
-const match = raw.match(/\{[\s\S]*\}/)  // greedy — captura 1o { ate ULTIMO }
-return JSON.parse(match[0])               // quebra se Claude adiciona texto apos o JSON
+// linha 138 — alterar maxTokens
+this.claudeClient = new ClaudeClient({
+  maxTokens: 4000,  // era 2000 — insuficiente para JSON templates grandes
+})
 ```
 
-**Evidencia:** POST /api/agents/segment-specialist → status=500, elapsed=50621ms
-```json
-{"error": "Expected ',' or '}' after property value in JSON at position 6309 (line 50 column 4)"}
-```
-
-**Fix — brace counting (substitui o metodo parseJSON inteiro):**
-```typescript
-private parseJSON<T>(content: string, caller: string): T {
-  // 1. Tenta extrair de code fence
-  const fence = content.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fence) {
-    try { return JSON.parse(fence[1].trim()) as T } catch {}
-  }
-  // 2. Brace counting — nao greedy
-  const start = content.indexOf('{')
-  if (start === -1) throw new Error(`Claude nao retornou JSON valido em ${caller}`)
-  let depth = 0, end = -1
-  for (let i = start; i < content.length; i++) {
-    if (content[i] === '{') depth++
-    else if (content[i] === '}') { depth--; if (depth === 0) { end = i; break } }
-  }
-  if (end === -1) throw new Error(`JSON nao fechado em ${caller}`)
-  try {
-    return JSON.parse(content.slice(start, end + 1)) as T
-  } catch (e) {
-    console.error(`[SegmentSpecialistAgent.${caller}]`, content.slice(start, start+300))
-    throw e
-  }
-}
-```
-
-**Apos o fix, Cowork re-testa:**
-1. POST /api/agents/segment-specialist → deve retornar 200 + segmento + diagnostico
-2. Supabase: empresa_segment_knowledge deve ter registro upsertado
-3. POST /api/agents/insight-analyzer → deve incluir getSegmentKnowledge() no prompt
+**Apos o fix, Cowork re-testa todos 3 cenarios:**
+1. POST /api/agents/segment-specialist → 200 + segmento_primario + best_practices + diagnostico
+2. Supabase: empresa_segment_knowledge deve ter registro com segmento + confianca_score
+3. POST /api/agents/insight-analyzer → deve incluir segment knowledge no prompt (getSegmentKnowledge)
 
 ---
 
@@ -78,4 +55,5 @@ private parseJSON<T>(content: string, caller: string): T {
 | 2026-03-13 | Loop #5 Sprint 4D Send Newsletter | DONE | dev |
 | 2026-03-13 | Loop #6 Sprint 4E 9 bugs newsletter | DONE | analyst - architect - dev - qa |
 | 2026-03-13 | Loop #7 BUG 10 fetchIBGE offset | DONE | dev |
-| 2026-03-13 | Loop #8 Sprint 4F BUG 11 parseJSON | DONE | dev |
+| 2026-03-13 | Loop #8 BUG 11 parseJSON greedy | DONE | dev |
+| 2026-03-13 | Loop #9 BUG 12 maxTokens 2000 | READY | — |
