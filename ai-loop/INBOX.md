@@ -9,24 +9,35 @@
 
 ---
 
-**Status: DONE**
+**Status: IDLE**
 
 ---
 
-## BUG 10 — Fix Aplicado (2026-03-13)
+---
 
-**Commit:** `0e4b62f`
+## Ultimo Report
 
-**Bug:** `fetchIBGE()` — `anoAtual - 2 = 2024` retorna `undefined` (IBGE não publicou 2024 ainda)
+**Data:** 2026-03-13
+**Sessao:** Loop #7 BUG 10 — fetchIBGE() PIB dinamico VALIDADO ✅
+**Commit browser-report:** browser-report BUG 10 FINAL — PIB dinamico validado 10/10 bugs ok
 
-**Fix:** Buscar range `2020-anoAtual` e pegar último ano com valor válido dinamicamente:
-```
-Object.entries(serie).reverse().find(([,v]) => v && v !== '-')
-```
-Resultado esperado: PIB 2023 = R$10.94T (último disponível confirmado pelo Cowork)
+---
 
-**Para o Cowork re-testar:**
-- `POST /api/agents/insight-analyzer` → verificar `dados_ibge[0].pib` não é null (deve ser ~10940000 ou similar)
+## Score Final Pipeline Newsletter
+
+**10/10 bugs corrigidos e validados em producao** 🎉
+
+| # | Bug | Status |
+|---|-----|--------|
+| 1+2 | fetchIPCA() soma errada + periodo hardcoded | CORRIGIDO ✅ |
+| 3 | fetchPNCP() 3 params errados | CORRIGIDO ✅ |
+| 4 | fetchIBGE() ano hardcoded 2021 | CORRIGIDO ✅ |
+| 5 | confianca_score nao passado ao Claude | CORRIGIDO ✅ |
+| 6 | progresso_maturidade hardcoded 70% | CORRIGIDO ✅ |
+| 7 | Headers List-Unsubscribe + replyTo ausentes | CORRIGIDO ✅ |
+| 8 | getDraft filtra status com draft_id | CORRIGIDO ✅ |
+| 9 | empresa_nome coluna inexistente | CORRIGIDO ✅ |
+| 10 | fetchIBGE() anoAtual-2 retorna undefined | CORRIGIDO ✅ |
 
 ---
 
