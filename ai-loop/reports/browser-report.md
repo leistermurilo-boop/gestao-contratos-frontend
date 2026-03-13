@@ -1,125 +1,77 @@
-# Browser Report — Loop #4b: Sprint 4C FIX — Content Writer Agent (2a iteracao)
+# Browser Report — Sprint 4C FINAL: Content Writer Agent ✅ APROVADO
 
 ## Environment
-- Date: 2026-03-12
+- Date: 2026-03-13
 - Tester: Cowork (Claude)
 - Environment: Production (Vercel)
 - App URL: https://app.duogovernance.com.br
 
-## Fix Testado
-commit e16cf98 — maxTokens 16000 + JSON extraction fallback fence
+## Fix Aplicado
+Commit fix definitivo — generateNewsletter dividido em 2 chamadas Claude:
+- Call 1: metadata JSON (~300 tokens output)
+- Call 2: HTML string only (~3000-5000 tokens output, sem JSON wrapper)
 
-## URL Tested
-POST /api/agents/content-writer
+Problema raiz: claude-sonnet-4-6 tem limite ~8192 tokens de output. Newsletter HTML completa
+com inline CSS excede esse limite. JSON truncado antes do } de fechamento — regex nunca matches.
 
-## RESULTADO: AINDA FALHOU
+---
 
-### Cenário 1 — POST autenticado (empresa_id: 41e0fceb-ab0e-49a8-9bd8-a7f04cd7cab2)
-- Status: HTTP 500
-- Tempo: 195s (antes era 94s — maxTokens 16000 esta ativo e gerando mais)
-- Body: { "error": "Claude nao retornou JSON valido" }
+## Cenário 1 — POST autenticado → HTTP 200 + draft_id ✅ PASSOU
 
-## NOVO DIAGNÓSTICO — Root Cause Real
+**Request:** POST /api/agents/content-writer
+- empresa_id: 41e0fceb-ab0e-49a8-9bd8-a7f04cd7cab2
+- Authorization: Bearer (session cookie via credentials: include)
 
-O problema NAO é só maxTokens. É truncação estrutural:
+**Response:**
+- Status: HTTP 200
+- draft_id: 408e6b52-a08d-4b95-ba2b-9cf2a0de96dd
+- subject: "4 alertas críticos + R$ 231K em margem recuperável"
+- tempo_processamento_ms: 58210
+- Tempo total: ~62s
 
-1. claude-sonnet-4-6 tem limite máximo de output de ~8192 tokens
-2. Setting maxTokens: 16000 nao ultrapassa o limite do modelo
-3. A newsletter HTML completa com inline CSS + JSON wrapper excede 8192 tokens
-4. A resposta é truncada ANTES do } de fechamento do JSON top-level
-5. regex /\{[\s\S]*\}/ requer { de abertura E } de fechamento — sem o } o match é null
+---
 
-Prova: tempo subiu de 94s para 195s — o modelo está gerando mais tokens (chegando ao limite 8192), mas ainda truncando antes de fechar o JSON.
+## Cenário 2 — newsletter_drafts populada com HTML no Supabase ✅ PASSOU
 
-## FIX DEFINITIVO NECESSÁRIO — Separar geração HTML
+**Query:** SELECT id, subject, status, html_length FROM newsletter_drafts ORDER BY created_at DESC
 
-### Abordagem: 2 chamadas Claude separadas
+**Resultado:**
+- id: 408e6b52-a08d-4b95-ba2b-9cf2a0de96dd
+- subject: 4 alertas críticos + R$ 231K em margem recuperável
+- status: draft
+- html_length: 19186 bytes
+- created_at: 2026-03-13 09:53:21
 
-Chamada 1 — apenas metadados JSON (pequeno, ~200 tokens):
-{
-  "subject": "...",
-  "preview_text": "...",
-  "alertas_criticos": [...],
-  "insights_semana": [...],
-  "radar_b2g": [...],
-  "cta_principal": "...",
-  "conceitos_ensinados": [...],
-  "roi_demonstrado": 0
-}
+---
 
-Chamada 2 — apenas o HTML do body (sem JSON wrapper, Claude retorna HTML direto):
-- System prompt: "Gere SOMENTE o HTML body (sem doctype, sem JSON). Inline CSS minimal."
-- Input: os metadados da Chamada 1
-- Output: string HTML pura
+## Cenário 3 — HTML contém seções obrigatórias ✅ PASSOU
 
-Depois montar NewsletterHTML localmente:
-const newsletter: NewsletterHTML = {
-  ...metadados,
-  html: htmlString,
-  plain_text: gerarPlainText(metadados)
-}
+**Query:** ILIKE checks em newsletter_drafts WHERE id = '408e6b52...'
 
-### Alternativa mais simples (se preferir 1 chamada):
-Reduzir o HTML: remover inline CSS extenso, usar style tag no head com classes,
-limitar o HTML a 3000 tokens máximo pedindo "HTML MINIMO e funcional, sem CSS verboso"
+**Resultado:**
+- has_alertas (html ILIKE '%alert%' OR '%critico%'): true ✅
+- has_insights (html ILIKE '%insight%' OR '%semana%'): true ✅
+- has_radar_b2g (html ILIKE '%radar%' OR '%B2G%'): true ✅
 
-## CENÁRIOS PARA VALIDAR APÓS FIX
-1. POST autenticado -> HTTP 200 + { draft_id, subject }
-2. newsletter_drafts populada no Supabase com HTML
-3. HTML contem: alertas criticos, insights da semana, Radar B2G
-4. POST sem autenticacao -> HTTP 401
-# Browser Report — Loop #4: Sprint 4C — Content Writer Agent
+---
 
-## Environment
-- Date: 2026-03-12
-- Tester: Cowork (Claude)
-- Environment: Production (Vercel)
-- App URL: https://app.duogovernance.com.br
+## Cenário 4 — POST sem autenticação → HTTP 401 ✅ PASSOU
 
-## URL Tested
-POST /api/agents/content-writer
+**Request:** POST /api/agents/content-writer sem cookies (credentials: omit)
 
-## RESULTADO FINAL: FALHOU
+**Response:**
+- Status: HTTP 401
+- Body: {"error":"Não autenticado"}
 
-### Cenário 1 — POST autenticado
-- Status: HTTP 500
-- Tempo: 94s
-- Body: { "error": "Claude nao retornou JSON valido" }
+---
 
-## DIAGNOSTICO
+## Resultado Final
 
-### Root Cause 1: maxTokens: 8000 insuficiente
-Arquivo: frontend/lib/agents/newsletter/content-writer/content-writer-agent.ts
-O construtor usa maxTokens: 8000. Newsletter HTML + JSON wrapper estimado em 8000-12000 tokens. Claude trunca no meio do JSON.
+| Cenário | Descrição | Status |
+|---------|-----------|--------|
+| 1 | POST autenticado → 200 + draft_id | ✅ PASSOU |
+| 2 | newsletter_drafts com HTML (19186 bytes) | ✅ PASSOU |
+| 3 | HTML contém alertas + insights + Radar B2G | ✅ PASSOU |
+| 4 | POST sem auth → 401 | ✅ PASSOU |
 
-### Root Cause 2: JSON extraction sem fallback
-response.content.match(/{[\s\S]*}/) falha quando resposta truncada.
-
-## FIX NECESSARIO
-
-### Fix 1: constructor — linha maxTokens
-ANTES: maxTokens: 8000,
-DEPOIS: maxTokens: 16000,
-
-### Fix 2: metodo generateNewsletter — substituir bloco de extração JSON
-ANTES:
-    const jsonMatch = response.content.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('Claude nao retornou JSON valido')
-    return JSON.parse(jsonMatch[0]) as NewsletterHTML
-
-DEPOIS:
-    let rawContent = response.content
-    const fenceMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (fenceMatch) rawContent = fenceMatch[1].trim()
-    const jsonMatch = rawContent.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      console.error('[ContentWriterAgent] Claude raw:', rawContent.substring(0, 500))
-      throw new Error('Claude nao retornou JSON valido')
-    }
-    return JSON.parse(jsonMatch[0]) as NewsletterHTML
-
-## CENARIOS PARA VALIDAR APOS FIX
-1. POST autenticado -> HTTP 200 + { draft_id, subject }
-2. newsletter_drafts populada no Supabase com HTML
-3. HTML contem: alertas criticos, insights da semana, Radar B2G
-4. POST sem autenticacao -> HTTP 401
+**Sprint 4C: APROVADO — Content Writer Agent funcionando em produção.**
