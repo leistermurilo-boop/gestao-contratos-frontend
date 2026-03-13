@@ -7,7 +7,7 @@
 
 ## Estado Atual
 
-**Status: READY**
+**Status: DONE**
 
 ---
 
@@ -56,4 +56,4 @@ this.claudeClient = new ClaudeClient({
 | 2026-03-13 | Loop #6 Sprint 4E 9 bugs newsletter | DONE | analyst - architect - dev - qa |
 | 2026-03-13 | Loop #7 BUG 10 fetchIBGE offset | DONE | dev |
 | 2026-03-13 | Loop #8 BUG 11 parseJSON greedy | DONE | dev |
-| 2026-03-13 | Loop #9 BUG 12 maxTokens 2000 | READY | — |
+| 2026-03-13 | Loop #9 BUG 12 maxTokens 2000 | DONE | dev |

@@ -135,7 +135,7 @@ export class SegmentSpecialistAgent {
   constructor(private supabase: SupabaseClient) {
     this.claudeClient = new ClaudeClient({
       model: 'claude-sonnet-4-6',
-      maxTokens: 2000,
+      maxTokens: 4000,  // BUG 12: 2000 insuficiente para JSON templates grandes das 2 chamadas
       temperature: 0.4,
     })
   }
