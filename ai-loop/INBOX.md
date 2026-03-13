@@ -8,7 +8,7 @@
 ## Estado Atual
 
 ```
-Status: DONE
+Status: IDLE
 ```
 
 ---
@@ -16,19 +16,27 @@ Status: DONE
 ## Ultimo Report
 
 **Data:** 2026-03-12
-**Sessao de Teste:** Loop #3 — Sprint 4B Insight Analyzer Agent
-**Relatorio:** ai-loop/reports/browser-report.md
-**Urgencia:** normal
-**Notas do Cowork:** POST /api/agents/insight-analyzer retornou 200. Migration 023 aplicada. newsletter_insights populada com 9 insights (4 criticos). Todas APIs responderam: IPCA/IBGE, Bacen/Selic, PNCP, IBGE/PIB. confianca_score: 0.85.
+**Sessao de Teste:** Loop #3 — Sprint 4B validada ✅
+**Proxima Sprint:** 4C — Content Writer Agent (deployada, aguardando teste)
 
 ## Task para Cowork — Sprint 4C: Content Writer Agent
 
-Sprint 4B validada ✅. Próxima sprint: **4C — Content Writer Agent**.
+Sprint 4C deployada. Commit: da9aa35
 
-O Content Writer lê `newsletter_insights` e gera o HTML da newsletter personalizada para a empresa.
+**Pré-requisito:** Aplicar MIGRATION 024 no Supabase SQL Editor (projeto hstlbkudwnboebmarilp)
+- Arquivo: `database/migrations/MIGRATION 024.sql`
 
-**Aguardando:** terminal implementar Sprint 4C e deployar.
-Quando pronto, o terminal atualizará esta seção com os cenários de teste.
+**Cenários a testar:**
+
+1. Fazer POST autenticado para `/api/agents/content-writer`
+2. Verificar resposta 200 com `{ success: true, data: { draft_id, subject } }`
+3. Confirmar que `newsletter_drafts` foi populada no Supabase com HTML gerado
+4. Verificar que o HTML contém as seções obrigatórias (alertas, insights, Radar B2G)
+5. Testar 401 sem autenticação
+
+**Quando finalizar os testes:**
+- Escrever browser-report.md com resultados
+- Atualizar este INBOX com Status: READY
 
 ---
 
