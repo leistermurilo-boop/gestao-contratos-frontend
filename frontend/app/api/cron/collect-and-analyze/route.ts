@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createDataCollectorAgent } from '@/lib/agents/newsletter/data-collector/data-collector-agent'
+import { createSegmentSpecialistAgent } from '@/lib/agents/newsletter/segment-specialist/segment-specialist-agent'
 import { createInsightAnalyzerAgent } from '@/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent'
 
 /**
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   }
 
   const supabase = createServiceRoleClient()
-  const resultados: Record<string, { collector: string; analyzer: string }> = {}
+  const resultados: Record<string, { collector: string; segment: string; analyzer: string }> = {}
   const erros: string[] = []
 
   try {
@@ -39,20 +40,35 @@ export async function GET(request: Request) {
       const { id: empresa_id, razao_social } = empresa as { id: string; razao_social: string }
 
       try {
-        // Data Collector
+        // 1. Data Collector
         const collector = createDataCollectorAgent(supabase)
         const collectResult = await collector.collect({ empresa_id })
 
-        // Insight Analyzer (independente do collector — usa dados já existentes se collect falhou)
+        // 2. Segment Specialist (Sprint 4F — graceful degradation: se falhar, Insight Analyzer continua)
+        let segmentLabel = '⏭️ skipped'
+        try {
+          const segment = createSegmentSpecialistAgent(supabase)
+          const segmentResult = await segment.analyze({ empresa_id })
+          segmentLabel = segmentResult.success
+            ? `✅ ${segmentResult.from_cache ? 'cache' : segmentResult.segmento}`
+            : `❌ ${segmentResult.error}`
+        } catch (segErr: unknown) {
+          const msg = segErr instanceof Error ? segErr.message : JSON.stringify(segErr)
+          segmentLabel = `❌ ${msg}`
+          console.error(`[Cron collect-and-analyze] Segment Specialist falhou em ${razao_social}:`, segErr)
+        }
+
+        // 3. Insight Analyzer (usa empresa_intelligence + segment knowledge)
         const analyzer = createInsightAnalyzerAgent(supabase)
         const analyzeResult = await analyzer.analyze({ empresa_id })
 
         resultados[empresa_id] = {
           collector: collectResult.success ? `✅ ${collectResult.insights_gerados ?? 0} insights` : `❌ ${collectResult.error}`,
+          segment: segmentLabel,
           analyzer: analyzeResult.success ? `✅ ${analyzeResult.total_insights ?? 0} insights (${analyzeResult.insights_criticos ?? 0} críticos)` : `❌ ${analyzeResult.error}`,
         }
 
-        console.log(`[${razao_social}] collector=${resultados[empresa_id].collector} analyzer=${resultados[empresa_id].analyzer}`)
+        console.log(`[${razao_social}] collector=${resultados[empresa_id].collector} segment=${resultados[empresa_id].segment} analyzer=${resultados[empresa_id].analyzer}`)
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : JSON.stringify(err)
         erros.push(`${razao_social}: ${msg}`)

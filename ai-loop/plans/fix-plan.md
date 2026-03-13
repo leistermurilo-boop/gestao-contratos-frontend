@@ -1,56 +1,55 @@
-# Fix Plan — @architect — Sprint 4E (2026-03-13)
+# Fix Plan — @architect — Sprint 4F: Segment Specialist Agent (2026-03-13)
 
-## Fix Plan
+## Decisões Técnicas
 
-**Bug:** Sprint 4E — 8 bugs newsletter agents
-**Causa Raiz:** Confirmada por @analyst
-**Aprovado:** @architect
+**Sprint:** 4F (4D=Send Newsletter, 4E=bug fixes — nomenclatura corrigida)
+**Complexidade estimada:** ~6h
+**Aprovado por:** @architect
 
----
+### Decisão 1: Sem web search — Claude usa conhecimento de treinamento
+Claude-sonnet-4-6 tem vasto conhecimento sobre B2G brasileiro. Sem dependência de EXA/Tavily.
+Vantagem: sem latência extra, sem custo adicional de API, sem ponto de falha externo.
 
-### BUG 1+2 — insight-analyzer: fetchIPCA()
-**Solução:**
-- Período dinâmico: calcular `anoAtual` e `mesAtual` no momento da chamada
-- Valor: usar `valores[valores.length - 1]` (último valor = acumulado do período)
-- Mês referência: extrair da última chave da série
+### Decisão 2: Lê empresa_intelligence — não re-coleta contratos
+Data Collector já produziu: portfolio_materiais, orgaos_frequentes, esferas_atuacao,
+ticket_medio, margem_media_historica, padroes_renovacao, sazonalidade, evolucao_portfolio.
+Segment Specialist lê esse output — não duplica queries ao banco.
 
-### BUG 3 — insight-analyzer: fetchPNCP()
-**Solução:**
-- Datas: `.replace(/-/g, '')` para converter `yyyy-MM-dd` → `yyyyMMdd`
-- `tamanhoPagina: '10'` (mínimo da API)
-- `codigoModalidadeContratacao: '5'` (Pregão Eletrônico)
+### Decisão 3: Duas chamadas Claude focadas
+- Chamada 1 (~800 tokens): Segmento + Best Practices (portfolio como input)
+- Chamada 2 (~600 tokens): Diagnóstico comportamental (intelligence completo como input)
+Total ~1400 tokens — dentro dos limites confortavelmente.
 
-### BUG 4 — insight-analyzer: fetchIBGE()
-**Solução:**
-- `const anoRef = new Date().getFullYear() - 2` (defasagem real do IBGE)
-- URL e chave `serie[String(anoRef)]` dinâmicos
+### Decisão 4: Cache 30 dias com upsert
+Segmento não muda frequentemente. onConflict: 'empresa_id' — só 1 registro por empresa.
+Cache invalidado se updated_at > 30 dias.
 
-### BUG 5 — confianca_score para generateInsights()
-**Solução:**
-- Calcular `confianca_score` em `fetchExternalData()` ou antes de chamar `generateInsights()`
-- Passar como parâmetro para `generateInsights()`
-- Incluir no system prompt: nível ALTA/MÉDIA/BAIXA + aviso se < 0.6
+### Decisão 5: Pipeline cron atualizado
+collect-and-analyze: Data Collector → Segment Specialist → Insight Analyzer
+(Segment Specialist inserido entre os dois — Insight Analyzer lê knowledge base)
 
-### BUG 6 — progresso_maturidade
-**Solução:**
-- Função `calcularProgresso(insights)`: contar quantas das 4 fontes têm dados (ipca, selic, pncp, ibge)
-- Resultado: 0/25/50/75/100% baseado em fontes disponíveis
+### Decisão 6: System prompt como constante de módulo
+O prompt de consultor B2G (desenvolvido pelo @analyst com pesquisa real) fica em
+SEGMENT_SPECIALIST_SYSTEM_PROMPT — constante no arquivo do agent.
 
-### BUG 7 — headers email
-**Solução:**
-- Adicionar `replyTo: 'contato@duogovernance.com.br'`
-- Adicionar `headers['List-Unsubscribe']` e `headers['List-Unsubscribe-Post']`
+## Arquivos a Criar/Modificar
 
-### BUG 8 — getDraft com draft_id
-**Solução:**
-- Se `draft_id` fornecido: query sem filtro de status (busca direta por ID)
-- Se não: query com `.eq('status', 'draft')` + order + limit
+### CRIAR:
+1. `database/migrations/MIGRATION 025.sql`
+2. `frontend/lib/agents/newsletter/segment-specialist/segment-specialist-agent.ts`
+3. `frontend/app/api/agents/segment-specialist/route.ts`
 
-**Arquivos Afetados:**
-- `frontend/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent.ts`
-- `frontend/lib/agents/newsletter/content-writer/content-writer-agent.ts`
-- `frontend/lib/agents/newsletter/send-newsletter/send-newsletter-agent.ts`
+### MODIFICAR:
+4. `frontend/lib/agents/core/types.ts` — adicionar tipos Sprint 4F
+5. `frontend/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent.ts` — integrar knowledge base
+6. `frontend/app/api/cron/collect-and-analyze/route.ts` — inserir Segment Specialist no pipeline
 
-**Migrations Necessárias:** não
+## Schema (simplificado vs proposta original)
+- REMOVIDO: referencias_urls (sem web search), ultima_busca_web (desnecessário)
+- MANTIDO: segmento_primario, subsegmentos, nicho_b2g, best_practices,
+  benchmarks_mercado, regiao_atuacao_inferida, modelo_negocio_inferido,
+  capacidade_operacional_inferida, estrategia_detectada, padroes_comportamentais
 
-**Riscos:** Nenhum — todas as alterações são internas aos métodos privados dos agents.
+## Sem riscos de regressão
+Segment Specialist é inserido no pipeline com try/catch isolado.
+Se falhar, Insight Analyzer continua sem o enrichment (graceful degradation).

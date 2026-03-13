@@ -101,7 +101,9 @@ export class InsightAnalyzerAgent {
       // BUG 5 fix: calcular confiança antes de gerar insights para passar ao Claude
       const apisOk = externalData.apis_consultadas.length
       const confianca_score = apisOk >= 3 ? 0.85 : apisOk >= 2 ? 0.65 : 0.40
-      const insights = await this.generateInsights(intelligence, externalData, confianca_score)
+      // Sprint 4F: enriquecer com knowledge base do segmento (graceful degradation)
+      const segmentKnowledge = await this.getSegmentKnowledge(empresa_id)
+      const insights = await this.generateInsights(intelligence, externalData, confianca_score, segmentKnowledge)
       await this.saveInsights(empresa_id, intelligence.id as string, insights, externalData, confianca_score, startTime)
 
       return {
@@ -290,10 +292,25 @@ export class InsightAnalyzerAgent {
 
   // === INSIGHTS COM CLAUDE ===
 
+  private async getSegmentKnowledge(empresa_id: string): Promise<Record<string, unknown> | null> {
+    try {
+      const { data } = await this.supabase
+        .from('empresa_segment_knowledge')
+        .select('segmento_primario, nicho_b2g, best_practices, benchmarks_mercado, estrategia_detectada, padroes_comportamentais')
+        .eq('empresa_id', empresa_id)
+        .single()
+      return data as Record<string, unknown> | null
+    } catch {
+      // knowledge base ausente não impede geração de insights
+      return null
+    }
+  }
+
   private async generateInsights(
     intelligence: Intelligence,
     external: ExternalData,
-    confianca_score: number
+    confianca_score: number,
+    segmentKnowledge: Record<string, unknown> | null = null
   ): Promise<Record<string, unknown>> {
     const contexto = {
       portfolio_materiais: intelligence.portfolio_materiais,
@@ -311,20 +328,30 @@ export class InsightAnalyzerAgent {
       apis_disponiveis: external.apis_consultadas,
     }
 
+    // Sprint 4F: incluir knowledge base do segmento se disponível
+    const contextoComSegmento = segmentKnowledge
+      ? { ...contexto, segmento_empresa: segmentKnowledge }
+      : contexto
+
     // BUG 5 fix: incluir confiança no contexto para Claude ajustar tom das análises
     const confiancaLabel = confianca_score >= 0.8 ? 'ALTA' : confianca_score >= 0.6 ? 'MÉDIA' : 'BAIXA'
     const confiancaAviso = confianca_score < 0.6
       ? 'ATENÇÃO: dados incompletos — adicione ressalvas quando necessário.'
       : ''
 
+    const segmentoInfo = segmentKnowledge
+      ? `\nSEGMENTO DETECTADO: ${segmentKnowledge.segmento_primario ?? 'N/A'} — use best_practices e benchmarks do segmento para calibrar os insights.`
+      : ''
+
     const response = await this.claudeClient.chat({
       systemPrompt:
-        `Você é o Insight Analyzer Agent do DUO Governance. Analise dados de empresa fornecedora B2G brasileira. Responda APENAS com JSON válido, sem markdown ou texto adicional. Use números reais dos dados fornecidos.\nQualidade dos dados: ${confiancaLabel} (score: ${confianca_score}). ${confiancaAviso}`,
+        `Você é o Insight Analyzer Agent do DUO Governance. Analise dados de empresa fornecedora B2G brasileira. Responda APENAS com JSON válido, sem markdown ou texto adicional. Use números reais dos dados fornecidos.\nQualidade dos dados: ${confiancaLabel} (score: ${confianca_score}). ${confiancaAviso}${segmentoInfo}`,
       prompt: `Com base nos dados internos e macroeconômicos, gere insights acionáveis com contexto educacional.
 Se uma API não retornou dados (null), ignore os insights que dependem dela.
+${segmentKnowledge ? 'Use o campo segmento_empresa.best_practices e benchmarks_mercado para tornar os insights mais precisos ao segmento da empresa.' : ''}
 
 DADOS:
-${JSON.stringify(contexto, null, 2)}
+${JSON.stringify(contextoComSegmento, null, 2)}
 
 RETORNE exatamente este JSON:
 {

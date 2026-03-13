@@ -187,6 +187,24 @@ export interface InsightAnalyzerOutput {
   error?: string
 }
 
+// ============================================
+// SEGMENT SPECIALIST AGENT TYPES (Sprint 4F)
+// ============================================
+
+export interface SegmentSpecialistInput {
+  empresa_id: string
+}
+
+export interface SegmentSpecialistOutput {
+  success: boolean
+  empresa_id: string
+  segmento?: string
+  knowledge_id?: string
+  from_cache?: boolean
+  tempo_processamento_ms: number
+  error?: string
+}
+
 export interface NewsletterHTML {
   subject: string
   preview_text: string
