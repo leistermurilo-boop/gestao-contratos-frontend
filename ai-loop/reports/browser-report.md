@@ -1,4 +1,4 @@
-# Browser Report — Sprint 4C FINAL: Content Writer Agent ✅ APROVADO
+# Browser Report — Sprint 4D FINAL: Send Newsletter Agent ✅ APROVADO
 
 ## Environment
 - Date: 2026-03-13
@@ -6,58 +6,64 @@
 - Environment: Production (Vercel)
 - App URL: https://app.duogovernance.com.br
 
-## Fix Aplicado
-Commit fix definitivo — generateNewsletter dividido em 2 chamadas Claude:
-- Call 1: metadata JSON (~300 tokens output)
-- Call 2: HTML string only (~3000-5000 tokens output, sem JSON wrapper)
+## Implementação Sprint 4D
+Commit: feat: Sprint 4D — send-newsletter agent via Resend
 
-Problema raiz: claude-sonnet-4-6 tem limite ~8192 tokens de output. Newsletter HTML completa
-com inline CSS excede esse limite. JSON truncado antes do } de fechamento — regex nunca matches.
+- POST /api/agents/send-newsletter
+- Lê newsletter_drafts (status='draft'), mais recente por empresa
+- Suporta draft_id e destinatario opcionais no body
+- Fallback destinatario: email do usuário autenticado
+- Envia via Resend com from newsletter@duogovernance.com.br
+- Atualiza status → 'sent' + enviado_em + enviado_para
+
+Pipeline completo: Data Collector → Insight Analyzer → Content Writer → Send Newsletter
 
 ---
 
-## Cenário 1 — POST autenticado → HTTP 200 + draft_id ✅ PASSOU
+## Cenário 1 — POST autenticado → HTTP 200 + resend_id ✅ PASSOU
 
-**Request:** POST /api/agents/content-writer
-- empresa_id: 41e0fceb-ab0e-49a8-9bd8-a7f04cd7cab2
-- Authorization: Bearer (session cookie via credentials: include)
+**Request:** POST /api/agents/send-newsletter
+- draft_id: 408e6b52-a08d-4b95-ba2b-9cf2a0de96dd
+- credentials: include
 
 **Response:**
 - Status: HTTP 200
-- draft_id: 408e6b52-a08d-4b95-ba2b-9cf2a0de96dd
+- success: true
+- resend_id: 82c160e5-513e-4f96-a26f-f174fc7cf248
+- destinatario: leistermurilo@gmail.com
 - subject: "4 alertas críticos + R$ 231K em margem recuperável"
-- tempo_processamento_ms: 58210
-- Tempo total: ~62s
+- tempo_processamento_ms: 1067
+- Tempo total: ~2.9s
 
 ---
 
-## Cenário 2 — newsletter_drafts populada com HTML no Supabase ✅ PASSOU
+## Cenário 2 — newsletter_drafts atualizado para 'sent' no Supabase ✅ PASSOU
 
-**Query:** SELECT id, subject, status, html_length FROM newsletter_drafts ORDER BY created_at DESC
+**Query:** SELECT id, subject, status, enviado_em, enviado_para FROM newsletter_drafts WHERE id = '408e6b52...'
 
 **Resultado:**
-- id: 408e6b52-a08d-4b95-ba2b-9cf2a0de96dd
-- subject: 4 alertas críticos + R$ 231K em margem recuperável
-- status: draft
-- html_length: 19186 bytes
-- created_at: 2026-03-13 09:53:21
+- status: sent ✅
+- enviado_em: 2026-03-13 10:23:40.788
+- enviado_para: leistermurilo@gmail.com
 
 ---
 
-## Cenário 3 — HTML contém seções obrigatórias ✅ PASSOU
+## Cenário 3 — POST com draft_id + destinatario custom ✅ PASSOU
 
-**Query:** ILIKE checks em newsletter_drafts WHERE id = '408e6b52...'
+**Request:** POST com body { draft_id: "408e6b52...", destinatario: "leistermurilo@gmail.com" }
 
-**Resultado:**
-- has_alertas (html ILIKE '%alert%' OR '%critico%'): true ✅
-- has_insights (html ILIKE '%insight%' OR '%semana%'): true ✅
-- has_radar_b2g (html ILIKE '%radar%' OR '%B2G%'): true ✅
+**Response:**
+- Status: HTTP 200
+- success: true
+- resend_id: d4660cd9-dade-4d95-821c-23ceb1d9d2a9 (novo ID — enviou de novo)
+- destinatario: leistermurilo@gmail.com (custom aceito)
+- tempo_processamento_ms: 1088
 
 ---
 
 ## Cenário 4 — POST sem autenticação → HTTP 401 ✅ PASSOU
 
-**Request:** POST /api/agents/content-writer sem cookies (credentials: omit)
+**Request:** POST /api/agents/send-newsletter sem cookies (credentials: omit)
 
 **Response:**
 - Status: HTTP 401
@@ -69,9 +75,10 @@ com inline CSS excede esse limite. JSON truncado antes do } de fechamento — re
 
 | Cenário | Descrição | Status |
 |---------|-----------|--------|
-| 1 | POST autenticado → 200 + draft_id | ✅ PASSOU |
-| 2 | newsletter_drafts com HTML (19186 bytes) | ✅ PASSOU |
-| 3 | HTML contém alertas + insights + Radar B2G | ✅ PASSOU |
+| 1 | POST autenticado → 200 + resend_id | ✅ PASSOU |
+| 2 | newsletter_drafts status='sent' + enviado_em | ✅ PASSOU |
+| 3 | draft_id + destinatario custom funcionando | ✅ PASSOU |
 | 4 | POST sem auth → 401 | ✅ PASSOU |
 
-**Sprint 4C: APROVADO — Content Writer Agent funcionando em produção.**
+**Sprint 4D: APROVADO — Pipeline completo funcionando em produção.**
+**Data Collector → Insight Analyzer → Content Writer → Send Newsletter ✅**
