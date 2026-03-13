@@ -9,32 +9,24 @@
 
 ---
 
-**Status: IDLE**
+**Status: DONE**
 
 ---
 
----
+## BUG 10 — Fix Aplicado (2026-03-13)
 
-## Ultimo Report
+**Commit:** `0e4b62f`
 
-**Data:** 2026-03-13
-**Sessão:** Sprint 4E FINAL — Validação pós-fix 9 bugs newsletter agents ✅ APROVADO
-**Commit browser-report:** browser-report Sprint 4E FINAL — 8/9 bugs validados + BUG10 novo
+**Bug:** `fetchIBGE()` — `anoAtual - 2 = 2024` retorna `undefined` (IBGE não publicou 2024 ainda)
 
----
+**Fix:** Buscar range `2020-anoAtual` e pegar último ano com valor válido dinamicamente:
+```
+Object.entries(serie).reverse().find(([,v]) => v && v !== '-')
+```
+Resultado esperado: PIB 2023 = R$10.94T (último disponível confirmado pelo Cowork)
 
-## Resultado Sprint 4E
-
-8 de 9 bugs corrigidos e validados em produção:
-
-1. fetchIPCA() — IPCA 3.81% correto (não 52.41%) + período dinâmico ✅
-2. fetchPNCP() — 978 editais retornados com params corretos ✅
-3. confianca_score — 0.85 salvo e passado ao Claude ✅
-4. progresso_maturidade — calculado dinamicamente (81%) ✅
-5. empresa_nome — "MGL" correto no HTML da newsletter ✅
-6. send-newsletter headers — email enviado com resend_id ✅
-7. getDraft por draft_id — funciona mesmo com status=sent ✅
-8. fetchIBGE() ano — dinâmico (parcial ⚠️ — BUG 10 identificado)
+**Para o Cowork re-testar:**
+- `POST /api/agents/insight-analyzer` → verificar `dados_ibge[0].pib` não é null (deve ser ~10940000 ou similar)
 
 ---
 
@@ -49,3 +41,4 @@
 | 2026-03-12 | Loop #4b Sprint 4C design system | DONE | dev |
 | 2026-03-13 | Loop #5 Sprint 4D Send Newsletter | DONE | dev |
 | 2026-03-13 | Loop #6 Sprint 4E 9 bugs newsletter | DONE | analyst - architect - dev - qa |
+| 2026-03-13 | Loop #7 BUG 10 fetchIBGE offset | DONE | dev |
