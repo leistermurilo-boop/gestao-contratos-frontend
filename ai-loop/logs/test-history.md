@@ -17,6 +17,13 @@
 
 ## Histórico
 
+### [2026-03-12] — Sprint 4C Content Writer Agent fix (Cowork loop #4)
+| Cenário | Perfil | Resultado | Notas |
+|---------|--------|-----------|-------|
+| POST autenticado → 500 (antes do fix) | admin | ❌ | maxTokens 8000 truncava JSON |
+| Fix maxTokens 8000→16000 | — | ✅ | aplicado no constructor |
+| Fix JSON extraction fence fallback | — | ✅ | aplicado em generateNewsletter |
+
 ### [2026-03-12] — Sprint 4B Insight Analyzer Agent (Cowork loop #3)
 | Cenário | Perfil | Resultado | Notas |
 |---------|--------|-----------|-------|
