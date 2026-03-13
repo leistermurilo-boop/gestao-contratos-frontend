@@ -1,68 +1,53 @@
 # INBOX — Loop Trigger
 
 > Arquivo de estado entre Cowork (browser) e Claude Code (terminal).
-> **Cowork escreve aqui.** O terminal monitora via `/loop`.
+> **Cowork escreve aqui.** O terminal monitora via '/loop'.
 
 ---
 
 ## Estado Atual
 
-```
-Status: IDLE
-```
+---
+Status: READY
+---
 
 ---
 
 ## Ultimo Report
 
 **Data:** 2026-03-12
-**Sessao de Teste:** Loop #3 — Sprint 4B validada ✅
-**Proxima Sprint:** 4C — Content Writer Agent (deployada, aguardando teste)
+**Sessao de Teste:** Loop #4 — Sprint 4C — Content Writer Agent FALHOU
+**Proxima Sprint:** 4C FIX — corrigir content-writer-agent.ts (maxTokens + JSON extraction)
 
-## Task para Cowork — Sprint 4C: Content Writer Agent
+## Task para Terminal — Sprint 4C FIX: Content Writer Agent
 
-Sprint 4C deployada. Commit: da9aa35
+**Browser report:** ai-loop/reports/browser-report.md (commit 769a002)
 
-**Pré-requisito:** Aplicar MIGRATION 024 no Supabase SQL Editor (projeto hstlbkudwnboebmarilp)
-- Arquivo: `database/migrations/MIGRATION 024.sql`
+**Arquivo a corrigir:** frontend/lib/agents/newsletter/content-writer/content-writer-agent.ts
 
-**Cenários a testar:**
+**Fix 1 — constructor:**
+- Mudar maxTokens: 8000 para maxTokens: 16000
 
-1. Fazer POST autenticado para `/api/agents/content-writer`
-2. Verificar resposta 200 com `{ success: true, data: { draft_id, subject } }`
-3. Confirmar que `newsletter_drafts` foi populada no Supabase com HTML gerado
-4. Verificar que o HTML contém as seções obrigatórias (alertas, insights, Radar B2G)
-5. Testar 401 sem autenticação
+**Fix 2 — metodo generateNewsletter, substituir bloco de extracao JSON:**
 
-**Quando finalizar os testes:**
-- Escrever browser-report.md com resultados
-- Atualizar este INBOX com Status: READY
+ANTES:
+    const jsonMatch = response.content.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('Claude nao retornou JSON valido')
+    return JSON.parse(jsonMatch[0]) as NewsletterHTML
 
----
+DEPOIS:
+    let rawContent = response.content
+    const fenceMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (fenceMatch) rawContent = fenceMatch[1].trim()
+    const jsonMatch = rawContent.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error('[ContentWriterAgent] Claude raw:', rawContent.substring(0, 500))
+      throw new Error('Claude nao retornou JSON valido')
+    }
+    return JSON.parse(jsonMatch[0]) as NewsletterHTML
 
-## Histórico
-
-| Data | Sessão | Status | Ciclo |
-|------|--------|--------|-------|
-| 2026-03-12 | Loop #3 — Sprint 4B Insight Analyzer | DONE | sem bugs — aprovado direto |
-| 2026-03-12 | Loop #2 — Sprint 4A Data Collector | DONE | analyst → architect → dev → qa |
-| 2026-03-12 | Loop #1 — Resend email endpoint | DONE | analyst → architect → dev → qa |
-
----
-
-## Como usar
-
-### Cowork escreve aqui quando termina os testes:
-```
-Status: READY
-Data: YYYY-MM-DD
-Sessao de Teste: descricao
-Relatorio: ai-loop/reports/browser-report.md
-Urgencia: normal|alta|critica
-Notas: contexto extra
-```
-
-### Terminal detecta READY e inicia ciclo:
-```bash
-/analyze-inbox
-```
+**Cenarios a testar apos fix:**
+1. POST autenticado para '/api/agents/content-writer' -> HTTP 200 + { success: true, draft_id, subject }
+2. Verificar newsletter_drafts no Supabase com HTML gerado
+3. HTML contem: alertas criticos, insights da semana, Radar B2G
+4. POST sem autenticacao -> HTTP 401
