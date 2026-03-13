@@ -60,14 +60,18 @@ export class SendNewsletterAgent {
 
       const destinatario = input.destinatario
 
+      // BUG 7 fix: headers obrigatórios (RFC 2369 + Gmail/Yahoo 2024) + replyTo
       const { data: resendData, error: resendError } = await this.resend.emails.send({
         from: 'Radar DUO™ <newsletter@duogovernance.com.br>',
         to: [destinatario],
+        replyTo: 'contato@duogovernance.com.br',
         subject: draft.subject,
         html: draft.html,
         text: draft.plain_text ?? undefined,
         headers: {
           'X-Entity-Ref-ID': draft.id,
+          'List-Unsubscribe': '<mailto:unsubscribe@duogovernance.com.br>',
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         },
       })
 
@@ -101,21 +105,34 @@ export class SendNewsletterAgent {
   // === SUPABASE ===
 
   private async getDraft(empresa_id: string, draft_id?: string): Promise<DraftRow | null> {
-    let query = this.supabase
-      .from('newsletter_drafts')
-      .select('id, subject, preview_text, html, plain_text, empresa_id')
-      .eq('empresa_id', empresa_id)
-      .eq('status', 'draft')
+    // BUG 8 fix: quando draft_id fornecido, busca direta por ID sem filtrar por status
+    const baseSelect = 'id, subject, preview_text, html, plain_text, empresa_id'
 
     if (draft_id) {
-      query = query.eq('id', draft_id)
-    } else {
-      query = query.order('gerado_em', { ascending: false })
+      const { data, error } = await this.supabase
+        .from('newsletter_drafts')
+        .select(baseSelect)
+        .eq('empresa_id', empresa_id)
+        .eq('id', draft_id)
+        .single()
+      if (error) {
+        if (error.code === 'PGRST116') return null
+        throw error
+      }
+      return data as DraftRow
     }
 
-    const { data, error } = await query.limit(1).single()
+    // Sem draft_id: pega o mais recente com status='draft'
+    const { data, error } = await this.supabase
+      .from('newsletter_drafts')
+      .select(baseSelect)
+      .eq('empresa_id', empresa_id)
+      .eq('status', 'draft')
+      .order('gerado_em', { ascending: false })
+      .limit(1)
+      .single()
     if (error) {
-      if (error.code === 'PGRST116') return null // not found
+      if (error.code === 'PGRST116') return null
       throw error
     }
     return data as DraftRow

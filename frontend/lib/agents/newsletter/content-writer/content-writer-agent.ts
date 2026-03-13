@@ -111,7 +111,8 @@ export class ContentWriterAgent {
         roi: meta.roi,
         cta_principal: meta.cta_principal,
         nivel_maturidade: intelligence ? 'Estratégico' : undefined,
-        progresso_maturidade: intelligence ? 70 : undefined,
+        // BUG 6 fix: calcular baseado em fontes reais disponíveis nos insights
+        progresso_maturidade: intelligence ? this.calcularProgresso(insights) : undefined,
       }
 
       const html = renderEmailTemplate(templateParams)
@@ -280,6 +281,19 @@ RETORNE:
       throw new Error('Claude não retornou JSON válido nos metadados')
     }
     return JSON.parse(jsonMatch[0]) as NewsletterMetaRaw
+  }
+
+  // === HELPERS ===
+
+  private calcularProgresso(insights: NewsletterInsights): number {
+    const fontes = [
+      insights.ipca_12m !== null && insights.ipca_12m !== undefined,
+      insights.selic_atual !== null && insights.selic_atual !== undefined,
+      Array.isArray(insights.dados_pncp) && (insights.dados_pncp as unknown[]).length > 0,
+      Array.isArray(insights.dados_ibge) && (insights.dados_ibge as unknown[]).length > 0,
+    ]
+    const disponiveis = fontes.filter(Boolean).length
+    return Math.round((disponiveis / fontes.length) * 100)
   }
 
   // === MONTAGEM ===

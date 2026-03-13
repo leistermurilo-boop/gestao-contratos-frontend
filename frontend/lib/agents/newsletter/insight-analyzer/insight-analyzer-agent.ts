@@ -83,8 +83,11 @@ export class InsightAnalyzerAgent {
       }
 
       const externalData = await this.fetchExternalData(intelligence)
-      const insights = await this.generateInsights(intelligence, externalData)
-      await this.saveInsights(empresa_id, intelligence.id as string, insights, externalData, startTime)
+      // BUG 5 fix: calcular confiança antes de gerar insights para passar ao Claude
+      const apisOk = externalData.apis_consultadas.length
+      const confianca_score = apisOk >= 3 ? 0.85 : apisOk >= 2 ? 0.65 : 0.40
+      const insights = await this.generateInsights(intelligence, externalData, confianca_score)
+      await this.saveInsights(empresa_id, intelligence.id as string, insights, externalData, confianca_score, startTime)
 
       return {
         success: true,
@@ -158,8 +161,15 @@ export class InsightAnalyzerAgent {
   }
 
   private async fetchIPCA(): Promise<IPCAData> {
+    // BUG 2 fix: período dinâmico (não hardcoded em 2024)
+    const now = new Date()
+    const anoAtual = now.getFullYear()
+    const mesAtual = String(now.getMonth() + 1).padStart(2, '0')
+    const periodoInicio = `${anoAtual}01`
+    const periodoFim = `${anoAtual}${mesAtual}`
+
     const res = await fetch(
-      'https://servicodados.ibge.gov.br/api/v3/agregados/1737/periodos/202401-202412/variaveis/2265?localidades=N1[all]',
+      `https://servicodados.ibge.gov.br/api/v3/agregados/1737/periodos/${periodoInicio}-${periodoFim}/variaveis/2265?localidades=N1[all]`,
       { signal: AbortSignal.timeout(8000) }
     )
     if (!res.ok) throw new Error(`IPCA HTTP ${res.status}`)
@@ -167,9 +177,12 @@ export class InsightAnalyzerAgent {
       resultados: Array<{ series: Array<{ serie: Record<string, string> }> }>
     }>
     const serie = json[0]?.resultados?.[0]?.series?.[0]?.serie ?? {}
-    const valores = Object.values(serie).map((v) => parseFloat(v || '0'))
-    const soma = valores.reduce((acc, v) => acc + v, 0)
-    return { acumulado_12m: parseFloat(soma.toFixed(2)), mes_referencia: '2024-12' }
+    const chaves = Object.keys(serie)
+    // BUG 1 fix: variável 2265 já é acumulado 12m — usar último valor, não somar
+    const ultimaChave = chaves[chaves.length - 1] ?? ''
+    const ultimo = parseFloat(serie[ultimaChave] || '0')
+    const mesReferencia = ultimaChave ? `${ultimaChave.slice(0, 4)}-${ultimaChave.slice(4, 6)}` : `${anoAtual}-${mesAtual}`
+    return { acumulado_12m: parseFloat(ultimo.toFixed(2)), mes_referencia: mesReferencia }
   }
 
   private async fetchSelic(): Promise<SelicData> {
@@ -198,12 +211,14 @@ export class InsightAnalyzerAgent {
 
     for (const material of top3) {
       try {
+        // BUG 3 fix: formato yyyyMMdd, tamanhoPagina mínimo 10, codigoModalidadeContratacao obrigatório
         const params = new URLSearchParams({
           q: material.descricao.substring(0, 50),
-          dataInicial: hoje,
-          dataFinal: em30dias,
+          dataInicial: hoje.replace(/-/g, ''),
+          dataFinal: em30dias.replace(/-/g, ''),
           pagina: '1',
-          tamanhoPagina: '5',
+          tamanhoPagina: '10',
+          codigoModalidadeContratacao: '6',
         })
         const res = await fetch(
           `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?${params}`,
@@ -237,16 +252,17 @@ export class InsightAnalyzerAgent {
   }
 
   private async fetchIBGE(): Promise<IBGEData[]> {
-    // PIB nacional como proxy macro (endpoint simples e estável)
+    // BUG 4 fix: PIB tem defasagem de ~2 anos — usar anoAtual - 2 dinamicamente
+    const anoRef = new Date().getFullYear() - 2
     const res = await fetch(
-      'https://servicodados.ibge.gov.br/api/v3/agregados/5938/periodos/2021/variaveis/37?localidades=N1[all]',
+      `https://servicodados.ibge.gov.br/api/v3/agregados/5938/periodos/${anoRef}/variaveis/37?localidades=N1[all]`,
       { signal: AbortSignal.timeout(8000) }
     )
     if (!res.ok) throw new Error(`IBGE HTTP ${res.status}`)
     const json = await res.json() as Array<{
       resultados: Array<{ series: Array<{ serie: Record<string, string> }> }>
     }>
-    const pibStr = json[0]?.resultados?.[0]?.series?.[0]?.serie?.['2021']
+    const pibStr = json[0]?.resultados?.[0]?.series?.[0]?.serie?.[String(anoRef)]
     return [{ municipio: 'Brasil', pib: pibStr ? parseFloat(pibStr) : null, populacao: 214000000 }]
   }
 
@@ -254,7 +270,8 @@ export class InsightAnalyzerAgent {
 
   private async generateInsights(
     intelligence: Intelligence,
-    external: ExternalData
+    external: ExternalData,
+    confianca_score: number
   ): Promise<Record<string, unknown>> {
     const contexto = {
       portfolio_materiais: intelligence.portfolio_materiais,
@@ -272,9 +289,15 @@ export class InsightAnalyzerAgent {
       apis_disponiveis: external.apis_consultadas,
     }
 
+    // BUG 5 fix: incluir confiança no contexto para Claude ajustar tom das análises
+    const confiancaLabel = confianca_score >= 0.8 ? 'ALTA' : confianca_score >= 0.6 ? 'MÉDIA' : 'BAIXA'
+    const confiancaAviso = confianca_score < 0.6
+      ? 'ATENÇÃO: dados incompletos — adicione ressalvas quando necessário.'
+      : ''
+
     const response = await this.claudeClient.chat({
       systemPrompt:
-        'Você é o Insight Analyzer Agent do DUO Governance. Analise dados de empresa fornecedora B2G brasileira. Responda APENAS com JSON válido, sem markdown ou texto adicional. Use números reais dos dados fornecidos.',
+        `Você é o Insight Analyzer Agent do DUO Governance. Analise dados de empresa fornecedora B2G brasileira. Responda APENAS com JSON válido, sem markdown ou texto adicional. Use números reais dos dados fornecidos.\nQualidade dos dados: ${confiancaLabel} (score: ${confianca_score}). ${confiancaAviso}`,
       prompt: `Com base nos dados internos e macroeconômicos, gere insights acionáveis com contexto educacional.
 Se uma API não retornou dados (null), ignore os insights que dependem dela.
 
@@ -359,12 +382,12 @@ RETORNE exatamente este JSON:
     intelligence_id: string,
     insights: Record<string, unknown>,
     external: ExternalData,
+    confianca_score: number,
     startTime: number
   ) {
     const total = this.countInsights(insights)
     const criticos = this.countCriticos(insights)
-    const apisOk = external.apis_consultadas.length
-    const confianca = apisOk >= 3 ? 0.85 : apisOk >= 2 ? 0.65 : 0.40
+    const confianca = confianca_score
 
     const { error } = await this.supabase.from('newsletter_insights').insert({
       empresa_id,
