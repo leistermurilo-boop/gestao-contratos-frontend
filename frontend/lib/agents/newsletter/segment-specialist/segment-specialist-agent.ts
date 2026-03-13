@@ -375,14 +375,29 @@ RETORNE exatamente este JSON:
   // === HELPERS ===
 
   private parseJSON<T>(content: string, caller: string): T {
+    // 1. Tenta extrair de code fence primeiro
     const fence = content.match(/```(?:json)?\s*([\s\S]*?)```/)
-    const raw = fence ? fence[1].trim() : content
-    const match = raw.match(/\{[\s\S]*\}/)
-    if (!match) {
-      console.error(`[SegmentSpecialistAgent.${caller}] raw:`, raw.substring(0, 300))
+    if (fence) {
+      try { return JSON.parse(fence[1].trim()) as T } catch { /* fallthrough */ }
+    }
+    // 2. Brace counting — não greedy, para no primeiro objeto JSON completo
+    const start = content.indexOf('{')
+    if (start === -1) {
+      console.error(`[SegmentSpecialistAgent.${caller}] sem JSON:`, content.substring(0, 300))
       throw new Error(`Claude não retornou JSON válido em ${caller}`)
     }
-    return JSON.parse(match[0]) as T
+    let depth = 0, end = -1
+    for (let i = start; i < content.length; i++) {
+      if (content[i] === '{') depth++
+      else if (content[i] === '}') { depth--; if (depth === 0) { end = i; break } }
+    }
+    if (end === -1) throw new Error(`JSON não fechado em ${caller}`)
+    try {
+      return JSON.parse(content.slice(start, end + 1)) as T
+    } catch (e) {
+      console.error(`[SegmentSpecialistAgent.${caller}]`, content.slice(start, start + 300))
+      throw e
+    }
   }
 
   private calcularConfianca(totalContratos: number, totalItens: number): number {

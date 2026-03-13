@@ -7,7 +7,7 @@
 
 ## Estado Atual
 
-**Status: READY**
+**Status: DONE**
 
 ---
 
@@ -78,4 +78,4 @@ private parseJSON<T>(content: string, caller: string): T {
 | 2026-03-13 | Loop #5 Sprint 4D Send Newsletter | DONE | dev |
 | 2026-03-13 | Loop #6 Sprint 4E 9 bugs newsletter | DONE | analyst - architect - dev - qa |
 | 2026-03-13 | Loop #7 BUG 10 fetchIBGE offset | DONE | dev |
-| 2026-03-13 | Loop #8 Sprint 4F BUG 11 parseJSON | READY | — |
+| 2026-03-13 | Loop #8 Sprint 4F BUG 11 parseJSON | DONE | dev |
