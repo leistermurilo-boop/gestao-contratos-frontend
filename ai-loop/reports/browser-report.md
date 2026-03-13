@@ -1,126 +1,74 @@
-# Browser Report — Sprint 4F Segment Specialist Agent
+# Browser Report — Sprint 4F Re-teste BUG 12
 **Data:** 2026-03-13
-**Sessao:** Loop #8 Sprint 4F — Segment Specialist Agent (BUG 11 encontrado)
+**Sessao:** Loop #8 Sprint 4F — Re-teste pos-BUG11 (BUG 12 encontrado)
 **Ambiente:** https://app.duogovernance.com.br (Vercel + Supabase producao)
-**Commit testado:** e96e0d288c9e0477b85f0e48b8dbf085a0ae6b28
+**Commits testados:** 2d64729 (fix BUG 11), e96e0d2 (sprint-4f original)
 
 ---
 
 ## Resumo
 
-Sprint 4F implementou o **Segment Specialist Agent** — novo agente que gera knowledge base B2G por empresa com 2 chamadas Claude (analise de segmento + diagnostico comportamental) e persiste em `empresa_segment_knowledge`.
-
-**Resultado:** 1 bug critico encontrado (BUG 11). Insight-analyzer e pipeline nao testados pois o prerequisito (segment-specialist) falhou.
-
----
-
-## Cenarios de Teste
-
-### CENARIO 1: POST /api/agents/segment-specialist
-**Status: FALHOU (500)**
-
-**Request:**
-```
-POST https://app.duogovernance.com.br/api/agents/segment-specialist
-Content-Type: application/json
-(sem body — empresa_id lido da sessao autenticada)
-```
-
-**Response:**
-```json
-{
-  "error": "Expected ',' or '}' after property value in JSON at position 6309 (line 50 column 4)"
-}
-```
-- HTTP Status: 500
-- Tempo de resposta: 50621ms (50s — 2 chamadas Claude completadas)
-- As chamadas Claude foram feitas (tempo confirma), mas o parse do resultado falhou
-
-### CENARIO 2: empresa_segment_knowledge no Supabase
-**Status: NAO TESTADO** — dependente do Cenario 1 (upsert so ocorre apos parse bem-sucedido)
-
-### CENARIO 3: insight-analyzer com getSegmentKnowledge()
-**Status: NAO TESTADO** — dependente do Cenario 1
+Pos-fix do BUG 11 (parseJSON greedy regex -> brace counting), re-testei o segment-specialist.
+Novo erro encontrado: BUG 12 — maxTokens: 2000 insuficiente para os JSON templates do agente.
+O brace counter (fix correto) detecta corretamente que o JSON foi truncado e lanca "JSON nao fechado".
 
 ---
 
-## Root Cause — BUG 11
+## Tentativa 1 — pos-fix BUG 11 (seg2)
+- status=500, elapsed=24136ms
+- erro: "529 — Anthropic API overloaded (req_011CZ1fuJZ7PEx1YYhYTVCvu)"
+- Causa: API Anthropic temporariamente sobrecarregada, nao relacionado ao codigo
 
-**Arquivo:** `frontend/lib/agents/newsletter/segment-specialist/segment-specialist-agent.ts`
-**Metodo:** `parseJSON()` linha 377-386
-**Funcao afetada:** `analyzeSegment()` ou `analyzeBehavior()`
-
-**Codigo atual (BUGADO):**
-```typescript
-private parseJSON<T>(content: string, caller: string): T {
-  const fence = content.match(/```(?:json)?\s*([\s\S]*?)```/)
-  const raw = fence ? fence[1].trim() : content
-  const match = raw.match(/\{[\s\S]*\}/)   // <-- GREEDY: captura 1o { ate ultimo }
-  if (!match) throw new Error(`Claude nao retornou JSON valido em ${caller}`)
-  return JSON.parse(match[0]) as T
-}
-```
-
-**Problema:** O regex `/\{[\s\S]*\}/` e GREEDY. Captura desde o primeiro `{` ate o **ultimo** `}` na string inteira. Se Claude adicionar qualquer texto apos o JSON que contenha `{...}` (ex: notas explicativas, exemplos inline), o regex inclui esse conteudo invalido. O JSON resultante quebra no parse (posicao 6309 = ~50 linhas de JSON valido seguido de lixo).
-
-**Fix correto — brace counting:**
-```typescript
-private parseJSON<T>(content: string, caller: string): T {
-  // 1. Tenta extrair de code fence
-  const fence = content.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fence) {
-    try { return JSON.parse(fence[1].trim()) as T } catch {}
-  }
-
-  // 2. Brace counting — encontra JSON balanceado sem regex greedy
-  const start = content.indexOf('{')
-  if (start === -1) throw new Error(`Claude nao retornou JSON valido em ${caller}`)
-
-  let depth = 0, end = -1
-  for (let i = start; i < content.length; i++) {
-    if (content[i] === '{') depth++
-    else if (content[i] === '}') {
-      depth--
-      if (depth === 0) { end = i; break }
-    }
-  }
-
-  if (end === -1) throw new Error(`JSON nao fechado em ${caller}`)
-
-  try {
-    return JSON.parse(content.slice(start, end + 1)) as T
-  } catch (e) {
-    console.error(`[SegmentSpecialistAgent.${caller}] parse error:`, content.slice(start, start+300))
-    throw e
-  }
-}
-```
+## Tentativa 2 — retry (seg3)
+- status=500, elapsed=52137ms
+- erro: "JSON nao fechado em analyzeSegment"
+- Causa: BUG 12 (ver abaixo)
 
 ---
 
-## Console / Network Errors
+## Root Cause — BUG 12
 
-- Sem erros de autenticacao (sessao valida, cookies ativos)
-- Sem erros 401/403 (middleware ok)
-- Erro 500 originado dentro do agente (catch no route handler)
-- Supabase nao consultado (erro antes do upsert)
+**Arquivo:** frontend/lib/agents/newsletter/segment-specialist/segment-specialist-agent.ts
+**Linha 138:** new ClaudeClient({ ..., maxTokens: 2000 })
+
+O agente instancia o ClaudeClient com maxTokens: 2000. Os JSON templates das 2 chamadas Claude sao grandes:
+- analyzeSegment: segmento_primario + subsegmentos + nicho_b2g + best_practices (6 sub-arrays) + benchmarks_mercado
+- analyzeBehavior: regiao_atuacao_inferida + modelo_negocio_inferido + capacidade_operacional_inferida + estrategia_detectada + padroes_comportamentais
+
+2000 tokens e insuficiente para Claude preencher todos os campos com conteudo real.
+A resposta e truncada antes do fechamento do JSON. O brace counter (fix correto do BUG 11)
+detecta isso e lanca "JSON nao fechado em analyzeSegment".
+
+**Fix:**
+Linha 138: maxTokens: 2000 -> maxTokens: 4000
+
+(Ou 6000 se os campos gerarem respostas mais longas em producao real.)
 
 ---
 
 ## Evidencias
 
-- fetch('https://app.duogovernance.com.br/api/agents/segment-specialist', {method:'POST'})
-  - status=500, elapsed=50621ms
-  - body={"error":"Expected ',' or '}' after property value in JSON at position 6309 (line 50 column 4)"}
-- Tempo de 50s confirma que ambas as chamadas Claude completaram com sucesso
-- Erro ocorre em parseJSON() — apos receber resposta do Claude, antes de salvar no Supabase
+- fetch POST /api/agents/segment-specialist (tentativa 2):
+  status=500, elapsed=52137ms
+  body={"error":"JSON nao fechado em analyzeSegment"}
+- elapsed 52s confirma: ambas as chamadas Claude chegaram a ser feitas (ou pelo menos a 1a)
+- Erro lancado em linha 394 do agente: if (end === -1) throw new Error("JSON nao fechado em caller")
+- Causa direta: content.indexOf('{') >= 0, mas brace counter nunca retorna a depth 0
+  = resposta truncada pelo limite de tokens (sem } de fechamento)
 
 ---
 
-## Score Sprint 4F
+## Score Sprint 4F (acumulado)
 
-- Cenario 1 (segment-specialist): FALHOU — BUG 11 parseJSON greedy regex
-- Cenario 2 (empresa_segment_knowledge): NAO TESTADO
-- Cenario 3 (insight-analyzer + segment): NAO TESTADO
+| Bug | Descricao | Status |
+|-----|-----------|--------|
+| BUG 11 | parseJSON greedy regex | CORRIGIDO (commit 2d64729) |
+| BUG 12 | maxTokens: 2000 insuficiente | PENDENTE — fix necessario |
 
-**Acao necessaria:** Terminal corrigir parseJSON() com brace counting. Redeployar. Cowork re-testar.
+| Cenario | Status |
+|---------|--------|
+| POST /api/agents/segment-specialist | FALHOU (500 — BUG 12) |
+| empresa_segment_knowledge upsert | NAO TESTADO |
+| insight-analyzer + segment enrichment | NAO TESTADO |
+
+**Acao necessaria:** Terminal alterar linha 138: maxTokens: 2000 -> maxTokens: 4000. Redeployar. Cowork re-testa.
