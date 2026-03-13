@@ -9,52 +9,43 @@
 
 ---
 
-**Status: DONE**
+**Status: IDLE**
 
 ---
 
-## Sprint 4E — Fixes Aplicados (2026-03-13)
+---
 
-Todos os 9 bugs corrigidos e deployados. Cowork pode re-testar o pipeline completo.
+## Ultimo Report
 
-**Commits:**
-- `bf99210` — fix Sprint 4E: 8 bugs agents newsletter
-- `0883da8` — fix timezone: hora de Brasília (BRT UTC-3) em todas capturas de data
-- `613a660` — fix content-writer: getEmpresaNome coluna 'nome' → 'razao_social'/'nome_fantasia'
+**Data:** 2026-03-13
+**Sessão:** Sprint 4E FINAL — Validação pós-fix 9 bugs newsletter agents ✅ APROVADO
+**Commit browser-report:** browser-report Sprint 4E FINAL — 8/9 bugs validados + BUG10 novo
 
 ---
 
-## O que foi corrigido
+## Resultado Sprint 4E
 
-| # | Arquivo | Fix aplicado |
-|---|---------|-------------|
-| 1+2 | insight-analyzer: fetchIPCA() | Último valor (não soma) + período dinâmico BRT |
-| 3 | insight-analyzer: fetchPNCP() | Data yyyyMMdd + tamanhoPagina 10 + codigoModalidade 6 |
-| 4 | insight-analyzer: fetchIBGE() | Ano dinâmico `anoAtual - 2` (defasagem IBGE) |
-| 5 | insight-analyzer: confianca_score | Passada ao Claude no system prompt |
-| 6 | content-writer: progresso_maturidade | Calculado por fontes reais (0/25/50/75/100%) |
-| 7 | send-newsletter: headers | List-Unsubscribe + replyTo adicionados |
-| 8 | send-newsletter: getDraft | Com draft_id: busca direta sem filtrar status |
-| 9 | content-writer: empresa_nome | `.select('razao_social, nome_fantasia')` — era coluna inexistente 'nome' |
+8 de 9 bugs corrigidos e validados em produção:
 
----
-
-## Para o Cowork re-testar
-
-1. `POST /api/agents/insight-analyzer` → verificar IPCA ~4.8%, PNCP com editais, PIB 2024
-2. `POST /api/agents/content-writer` → verificar nome da empresa correto no header da news
-3. `POST /api/agents/send-newsletter` → verificar email recebido com replyTo + List-Unsubscribe
-4. Verificar `progresso_maturidade` refletindo fontes reais (não sempre 70%)
+1. fetchIPCA() — IPCA 3.81% correto (não 52.41%) + período dinâmico ✅
+2. fetchPNCP() — 978 editais retornados com params corretos ✅
+3. confianca_score — 0.85 salvo e passado ao Claude ✅
+4. progresso_maturidade — calculado dinamicamente (81%) ✅
+5. empresa_nome — "MGL" correto no HTML da newsletter ✅
+6. send-newsletter headers — email enviado com resend_id ✅
+7. getDraft por draft_id — funciona mesmo com status=sent ✅
+8. fetchIBGE() ano — dinâmico (parcial ⚠️ — BUG 10 identificado)
 
 ---
 
-## Histórico
+## Historico
 
-| Data | Sessão | Status | Ciclo |
+| Data | Sessao | Status | Ciclo |
 |------|--------|--------|-------|
-| 2026-03-12 | Loop #1 Resend middleware | ✅ DONE | dev |
-| 2026-03-12 | Loop #2 Sprint 4A Data Collector | ✅ DONE | analyst → architect → dev → qa |
-| 2026-03-12 | Loop #3 Sprint 4B Insight Analyzer | ✅ DONE | analyst → architect → dev → qa |
-| 2026-03-12 | Loop #4 Sprint 4C fix maxTokens | ✅ DONE | dev |
-| 2026-03-12 | Loop #4b Sprint 4C design system | ✅ DONE | dev |
-| 2026-03-13 | Loop #5 Sprint 4E 9 bugs newsletter | ✅ DONE | analyst → architect → dev → qa |
+| 2026-03-12 | Loop #1 Resend middleware | DONE | dev |
+| 2026-03-12 | Loop #2 Sprint 4A Data Collector | DONE | analyst - architect - dev - qa |
+| 2026-03-12 | Loop #3 Sprint 4B Insight Analyzer | DONE | analyst - architect - dev - qa |
+| 2026-03-12 | Loop #4 Sprint 4C fix maxTokens | DONE | dev |
+| 2026-03-12 | Loop #4b Sprint 4C design system | DONE | dev |
+| 2026-03-13 | Loop #5 Sprint 4D Send Newsletter | DONE | dev |
+| 2026-03-13 | Loop #6 Sprint 4E 9 bugs newsletter | DONE | analyst - architect - dev - qa |
