@@ -1,61 +1,51 @@
-# Browser Report — Sprint 4F BUG 15
+# Browser Report — Sprint 4F BUG 15 (persiste)
 
 ## Environment
 - URL Tested: https://app.duogovernance.com.br/dashboard
 - Date: 2026-03-15
-- Loop: #12 — Sprint 4F BUG 15
+- Loop: #12b — Sprint 4F BUG 15 ainda não resolvido
 
 ## Test Scenario
-Cenário 3 re-teste pós BUG 14 — POST /api/agents/insight-analyzer → 200 + insights com segment enrichment
+Cenário 3 re-teste pós BUG 15 — POST /api/agents/insight-analyzer
 
 ## Steps Performed
 1. Autenticado em app.duogovernance.com.br/dashboard
 2. Disparado POST /api/agents/insight-analyzer — fire-and-forget
-3. Aguardado ~122s
-4. Coletado resultado via window._ia1Status / window._ia1Result
+3. Aguardado resultado via window._ia2Status
 
 ## Expected Result
-HTTP 200 + insights enriquecidos com segment knowledge (getSegmentKnowledge)
+HTTP 200 + insights enriquecidos com segment knowledge
 
 ## Actual Result
-HTTP 500 após 122822ms
+HTTP 500 após 161068ms
 { "error": "JSON não fechado em parseInsightResponse" }
 
-## Console Errors
-Nenhum (erro server-side)
+## Evidência de Progresso
+Tempo anterior (antes do aumento de maxTokens): 122822ms
+Tempo atual (após aumento de maxTokens): 161068ms
 
-## Network Errors
-POST /api/agents/insight-analyzer → 500 (122822ms)
-
-## Database Errors
-Nenhum
+O tempo MAIOR confirma que maxTokens foi aumentado e o Claude está gerando
+mais tokens agora — mas a resposta AINDA está sendo truncada antes do fechamento.
+O conteúdo do insight-analyzer é muito grande para o novo limite também.
 
 ## Root Cause Hypothesis
-BUG 15 — maxTokens insuficiente no insight-analyzer-agent.ts.
-
-O brace counter (fix BUG 14) foi aplicado corretamente e está detectando o truncamento:
-"JSON não fechado em parseInsightResponse" é a mensagem do brace counter quando
-não encontra o } de fechamento — o que significa que a resposta do Claude foi cortada
-antes de completar o JSON.
-
-O insight-analyzer usa maxTokens: 6000 (linha ~78 do arquivo).
-Com o enrichment de segment knowledge (getSegmentKnowledge) adicionado ao prompt,
-a resposta ficou ainda maior, ultrapassando 6000 tokens.
-
-Mesmo padrão do BUG 12 no segment-specialist (maxTokens: 2000 → corrigido para 4000).
-O insight-analyzer provavelmente precisa de mais tokens por gerar análises mais complexas.
+maxTokens atual ainda insuficiente para o insight-analyzer.
+O agente provavelmente gera uma análise muito extensa com múltiplos campos.
+Estimativa baseada na taxa de geração (~50-60 tokens/s):
+- 122s → ~6000-7500 tokens gerados (truncado)
+- 161s → ~8000-9600 tokens gerados (truncado)
+O response completo provavelmente requer 10000-16000 tokens.
 
 ## Suggested Fix Direction
-Aumentar maxTokens no ClaudeClient do insight-analyzer-agent.ts:
+Aumentar maxTokens para 16000 no insight-analyzer-agent.ts:
 
   this.claudeClient = new ClaudeClient({
-    maxTokens: 8000,  // era 6000 — insuficiente com segment enrichment
+    maxTokens: 16000,  // era 6000→8000 — ainda insuficiente
   })
 
-Sugestão: 8000 ou 10000 dependendo do tamanho típico da resposta.
-Após o fix, re-testar Cenário 3.
+Alternativa: Refatorar o prompt para gerar resposta mais concisa,
+ou dividir a análise em múltiplas chamadas menores.
 
-## Status Cenários Sprint 4F
-- Cenário 1: PASSOU — POST /api/agents/segment-specialist → 200 (80577ms), segmento: Equipamentos de Informática
-- Cenário 2: PASSOU — from_cache: true (1457ms), registro confirmado em empresa_segment_knowledge
-- Cenário 3: FALHOU — BUG 15 maxTokens: 6000 insuficiente em insight-analyzer
+Nota: Considerar também o timeout da Vercel (300s max em Pro).
+Com 16000 tokens a ~50 tokens/s = ~320s — pode ultrapassar o limite.
+Recomendação: usar streaming ou dividir em chamadas menores.
