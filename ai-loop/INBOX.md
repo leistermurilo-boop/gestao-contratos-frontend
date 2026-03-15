@@ -7,45 +7,31 @@ Cowork escreve aqui. O terminal monitora via '/loop'.
 
 ## Estado Atual
 
-**Status: DONE**
-**Loop #11 — Sprint 4F BUG 14**
+**Status: READY**
+**Loop #12 — Sprint 4F BUG 15**
 **Data:** 2026-03-15
 
-**BUG 14 — greedy regex em insight-analyzer-agent.ts**
+**BUG 15 — maxTokens: 6000 insuficiente em insight-analyzer-agent.ts**
 
 Arquivo: frontend/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent.ts
-Linha 422: const jsonMatch = response.content.match(/\{[\s\S]*\}/)
-Linha 424: return JSON.parse(jsonMatch[0])
+Linha ~78: maxTokens: 6000
 
-Erro em producao: POST /api/agents/insight-analyzer → status=500, elapsed=122930ms
-{ "error": "Expected ',' or ']' after array element in JSON at position 16080 (line 139 column 6)" }
+Erro em producao: POST /api/agents/insight-analyzer → status=500, elapsed=122822ms
+{ "error": "JSON não fechado em parseInsightResponse" }
 
-Causa: Mesma greedy regex do BUG 11 (corrigido no segment-specialist, commit 2d64729),
-mas NAO aplicado ao insight-analyzer. A regex \{[\s\S]*\} captura do primeiro { ate o
-ULTIMO } no response — se Claude adicionar texto/JSON apos o objeto principal, o resultado
-e JSON invalido. Com maxTokens: 6000 a resposta e grande (~16KB) aumentando a chance de
-conteudo extra apos o objeto.
+Causa: O brace counter (fix BUG 14) foi corretamente aplicado e detecta truncamento.
+A mensagem "JSON nao fechado em parseInsightResponse" confirma que a resposta do Claude
+e cortada antes do fechamento do JSON. Com segment knowledge enrichment adicionado ao
+prompt, a resposta ultrapassou 6000 tokens.
+Mesmo padrao do BUG 12 no segment-specialist (maxTokens: 2000 corrigido para 4000).
 
-Fix — aplicar o mesmo brace-counting do BUG 11:
-Substituir linhas 422-424 de insight-analyzer-agent.ts por:
-
-  const start = content.indexOf('{')
-  let depth = 0, end = -1
-  for (let i = start; i < content.length; i++) {
-    if (content[i] === '{') depth++
-    else if (content[i] === '}') { depth--; if (depth === 0) { end = i; break } }
-  }
-  if (end === -1) throw new Error('JSON nao fechado em parseInsightResponse')
-  return JSON.parse(content.slice(start, end + 1))
-
-Resultados dos cenarios anteriores (Cenarios 1 e 2 PASSARAM apos fix BUG 13):
-- Cenario 1: POST /api/agents/segment-specialist → 200 OK (80577ms)
-  segmento: "Equipamentos de Informatica", knowledge_id: "c4afc4a5...", from_cache: false
-- Cenario 2: Segunda chamada → 200 OK (1457ms), from_cache: true — registro confirmado no Supabase
-- Cenario 3: POST /api/agents/insight-analyzer → 500 (BUG 14 — pendente fix)
+Fix — 1 linha:
+  this.claudeClient = new ClaudeClient({
+    maxTokens: 8000,  // era 6000 — insuficiente com segment enrichment no prompt
+  })
 
 Apos o fix, Cowork re-testa apenas Cenario 3:
-POST /api/agents/insight-analyzer → 200 + insights com segment knowledge enriquecido
+POST /api/agents/insight-analyzer → 200 + insights com getSegmentKnowledge enriquecido
 
 ---
 
@@ -65,3 +51,4 @@ POST /api/agents/insight-analyzer → 200 + insights com segment knowledge enriq
 | 2026-03-13 | Loop #9 | BUG 12 maxTokens 2000 segment-specialist | DONE dev |
 | 2026-03-15 | Loop #10 | BUG 13 VARCHAR(200) overflow | DONE dev |
 | 2026-03-15 | Loop #11 | BUG 14 greedy regex insight-analyzer | DONE dev |
+| 2026-03-15 | Loop #12 | BUG 15 maxTokens 6000 insight-analyzer | READY — aguardando fix terminal |
