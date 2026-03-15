@@ -1,74 +1,46 @@
-# Browser Report — Sprint 4F Re-teste BUG 12
-**Data:** 2026-03-13
-**Sessao:** Loop #8 Sprint 4F — Re-teste pos-BUG11 (BUG 12 encontrado)
-**Ambiente:** https://app.duogovernance.com.br (Vercel + Supabase producao)
-**Commits testados:** 2d64729 (fix BUG 11), e96e0d2 (sprint-4f original)
+# Browser Report — Sprint 4F BUG 13
 
----
+## Environment
+- URL Tested: https://app.duogovernance.com.br/dashboard
+- Date: 2026-03-15
+- Loop: #10 — Sprint 4F BUG 13
 
-## Resumo
+## Test Scenario
+Cenário 1 — POST /api/agents/segment-specialist → 200 + segmento + registro em empresa_segment_knowledge
 
-Pos-fix do BUG 11 (parseJSON greedy regex -> brace counting), re-testei o segment-specialist.
-Novo erro encontrado: BUG 12 — maxTokens: 2000 insuficiente para os JSON templates do agente.
-O brace counter (fix correto) detecta corretamente que o JSON foi truncado e lanca "JSON nao fechado".
+## Steps Performed
+1. Autenticado em app.duogovernance.com.br/dashboard
+2. Disparado fetch fire-and-forget: POST /api/agents/segment-specialist
+3. Aguardado ~77s (analyzeSegment + analyzeBehavior)
+4. Resultado: window._seg5Status = done_500_76760ms
 
----
+## Expected Result
+HTTP 200 + segmento_primario + registro em empresa_segment_knowledge
 
-## Tentativa 1 — pos-fix BUG 11 (seg2)
-- status=500, elapsed=24136ms
-- erro: "529 — Anthropic API overloaded (req_011CZ1fuJZ7PEx1YYhYTVCvu)"
-- Causa: API Anthropic temporariamente sobrecarregada, nao relacionado ao codigo
+## Actual Result
+HTTP 500 — { code: 22001, message: value too long for type character varying(200) }
 
-## Tentativa 2 — retry (seg3)
-- status=500, elapsed=52137ms
-- erro: "JSON nao fechado em analyzeSegment"
-- Causa: BUG 12 (ver abaixo)
+## Console Errors
+Nenhum (erro server-side)
 
----
+## Network Errors
+POST /api/agents/segment-specialist → 500 (76760ms)
 
-## Root Cause — BUG 12
+## Database Errors
+Postgres 22001: value too long for character varying(200)
+Tabela: empresa_segment_knowledge
+BUG 12 corrigido (maxTokens 4000) mas colunas VARCHAR(200) insuficientes
 
-**Arquivo:** frontend/lib/agents/newsletter/segment-specialist/segment-specialist-agent.ts
-**Linha 138:** new ClaudeClient({ ..., maxTokens: 2000 })
+## Root Cause Hypothesis
+MIGRATION 025.sql define VARCHAR(200) para:
+- segmento_primario
+- modelo_negocio_inferido
+- estrategia_detectada
+Com maxTokens 4000 Claude gera valores acima de 200 chars.
 
-O agente instancia o ClaudeClient com maxTokens: 2000. Os JSON templates das 2 chamadas Claude sao grandes:
-- analyzeSegment: segmento_primario + subsegmentos + nicho_b2g + best_practices (6 sub-arrays) + benchmarks_mercado
-- analyzeBehavior: regiao_atuacao_inferida + modelo_negocio_inferido + capacidade_operacional_inferida + estrategia_detectada + padroes_comportamentais
-
-2000 tokens e insuficiente para Claude preencher todos os campos com conteudo real.
-A resposta e truncada antes do fechamento do JSON. O brace counter (fix correto do BUG 11)
-detecta isso e lanca "JSON nao fechado em analyzeSegment".
-
-**Fix:**
-Linha 138: maxTokens: 2000 -> maxTokens: 4000
-
-(Ou 6000 se os campos gerarem respostas mais longas em producao real.)
-
----
-
-## Evidencias
-
-- fetch POST /api/agents/segment-specialist (tentativa 2):
-  status=500, elapsed=52137ms
-  body={"error":"JSON nao fechado em analyzeSegment"}
-- elapsed 52s confirma: ambas as chamadas Claude chegaram a ser feitas (ou pelo menos a 1a)
-- Erro lancado em linha 394 do agente: if (end === -1) throw new Error("JSON nao fechado em caller")
-- Causa direta: content.indexOf('{') >= 0, mas brace counter nunca retorna a depth 0
-  = resposta truncada pelo limite de tokens (sem } de fechamento)
-
----
-
-## Score Sprint 4F (acumulado)
-
-| Bug | Descricao | Status |
-|-----|-----------|--------|
-| BUG 11 | parseJSON greedy regex | CORRIGIDO (commit 2d64729) |
-| BUG 12 | maxTokens: 2000 insuficiente | PENDENTE — fix necessario |
-
-| Cenario | Status |
-|---------|--------|
-| POST /api/agents/segment-specialist | FALHOU (500 — BUG 12) |
-| empresa_segment_knowledge upsert | NAO TESTADO |
-| insight-analyzer + segment enrichment | NAO TESTADO |
-
-**Acao necessaria:** Terminal alterar linha 138: maxTokens: 2000 -> maxTokens: 4000. Redeployar. Cowork re-testa.
+## Suggested Fix Direction
+ALTER TABLE empresa_segment_knowledge
+  ALTER COLUMN segmento_primario TYPE TEXT,
+  ALTER COLUMN modelo_negocio_inferido TYPE TEXT,
+  ALTER COLUMN estrategia_detectada TYPE TEXT;
+Criar MIGRATION 026.sql ou aplicar via Supabase SQL editor.
