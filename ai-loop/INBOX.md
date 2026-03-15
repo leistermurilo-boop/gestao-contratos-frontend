@@ -7,31 +7,36 @@ Cowork escreve aqui. O terminal monitora via '/loop'.
 
 ## Estado Atual
 
-**Status: DONE**
-**Loop #12 — Sprint 4F BUG 15**
+**Status: READY**
+**Loop #12b — Sprint 4F BUG 15 (persiste)**
 **Data:** 2026-03-15
 
-**BUG 15 — maxTokens: 6000 insuficiente em insight-analyzer-agent.ts**
+**BUG 15 — maxTokens ainda insuficiente em insight-analyzer-agent.ts**
 
-Arquivo: frontend/lib/agents/newsletter/insight-analyzer/insight-analyzer-agent.ts
-Linha ~78: maxTokens: 6000
-
-Erro em producao: POST /api/agents/insight-analyzer → status=500, elapsed=122822ms
+Erro: POST /api/agents/insight-analyzer → 500
 { "error": "JSON não fechado em parseInsightResponse" }
 
-Causa: O brace counter (fix BUG 14) foi corretamente aplicado e detecta truncamento.
-A mensagem "JSON nao fechado em parseInsightResponse" confirma que a resposta do Claude
-e cortada antes do fechamento do JSON. Com segment knowledge enrichment adicionado ao
-prompt, a resposta ultrapassou 6000 tokens.
-Mesmo padrao do BUG 12 no segment-specialist (maxTokens: 2000 corrigido para 4000).
+Evidência de progresso — o tempo de resposta aumentou:
+- Antes do aumento de maxTokens: elapsed=122822ms
+- Após o aumento de maxTokens: elapsed=161068ms
+Isso confirma que maxTokens foi aumentado e o Claude gera mais tokens agora,
+mas a resposta AINDA é truncada antes do fechamento do JSON.
 
-Fix — 1 linha:
+Estimativa de tokens necessários:
+- 122s a ~60 tokens/s ≈ 7300 tokens (truncado no limite anterior)
+- 161s a ~60 tokens/s ≈ 9660 tokens (truncado no novo limite)
+O response completo provavelmente requer 10000-16000 tokens.
+
+Fix recomendado:
   this.claudeClient = new ClaudeClient({
-    maxTokens: 8000,  // era 6000 — insuficiente com segment enrichment no prompt
+    maxTokens: 16000,  // aumentar significativamente
   })
 
-Apos o fix, Cowork re-testa apenas Cenario 3:
-POST /api/agents/insight-analyzer → 200 + insights com getSegmentKnowledge enriquecido
+ATENÇÃO: Com 16000 tokens, o tempo de geração pode ultrapassar 300s (timeout Vercel).
+Alternativa mais robusta: refatorar o prompt para resposta mais concisa,
+ou dividir a análise do insight-analyzer em 2 chamadas menores.
+
+Após o fix, Cowork re-testa apenas Cenário 3.
 
 ---
 
@@ -51,4 +56,4 @@ POST /api/agents/insight-analyzer → 200 + insights com getSegmentKnowledge enr
 | 2026-03-13 | Loop #9 | BUG 12 maxTokens 2000 segment-specialist | DONE dev |
 | 2026-03-15 | Loop #10 | BUG 13 VARCHAR(200) overflow | DONE dev |
 | 2026-03-15 | Loop #11 | BUG 14 greedy regex insight-analyzer | DONE dev |
-| 2026-03-15 | Loop #12 | BUG 15 maxTokens 6000 insight-analyzer | DONE dev |
+| 2026-03-15 | Loop #12 | BUG 15 maxTokens insight-analyzer | READY — fix insuficiente, precisa 16000+ |
