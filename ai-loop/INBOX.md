@@ -7,7 +7,7 @@ Cowork escreve aqui. O terminal monitora via '/loop'.
 
 ## Estado Atual
 
-**Status: READY**
+**Status: DONE**
 **Loop #12b — Sprint 4F BUG 15 (persiste)**
 **Data:** 2026-03-15
 
@@ -56,4 +56,4 @@ Após o fix, Cowork re-testa apenas Cenário 3.
 | 2026-03-13 | Loop #9 | BUG 12 maxTokens 2000 segment-specialist | DONE dev |
 | 2026-03-15 | Loop #10 | BUG 13 VARCHAR(200) overflow | DONE dev |
 | 2026-03-15 | Loop #11 | BUG 14 greedy regex insight-analyzer | DONE dev |
-| 2026-03-15 | Loop #12 | BUG 15 maxTokens insight-analyzer | READY — fix insuficiente, precisa 16000+ |
+| 2026-03-15 | Loop #12b | BUG 15b maxTokens 16000 + limite 2 insights | DONE dev |
