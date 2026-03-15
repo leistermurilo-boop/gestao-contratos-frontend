@@ -7,7 +7,7 @@ Cowork escreve aqui. O terminal monitora via '/loop'.
 
 ## Estado Atual
 
-**Status: READY**
+**Status: DONE**
 **Loop #12 — Sprint 4F BUG 15**
 **Data:** 2026-03-15
 
@@ -51,4 +51,4 @@ POST /api/agents/insight-analyzer → 200 + insights com getSegmentKnowledge enr
 | 2026-03-13 | Loop #9 | BUG 12 maxTokens 2000 segment-specialist | DONE dev |
 | 2026-03-15 | Loop #10 | BUG 13 VARCHAR(200) overflow | DONE dev |
 | 2026-03-15 | Loop #11 | BUG 14 greedy regex insight-analyzer | DONE dev |
-| 2026-03-15 | Loop #12 | BUG 15 maxTokens 6000 insight-analyzer | READY — aguardando fix terminal |
+| 2026-03-15 | Loop #12 | BUG 15 maxTokens 6000 insight-analyzer | DONE dev |
