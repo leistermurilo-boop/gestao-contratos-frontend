@@ -1,46 +1,68 @@
-# Browser Report — Sprint 4F BUG 13
+# Browser Report — Sprint 4F BUG 14
 
 ## Environment
 - URL Tested: https://app.duogovernance.com.br/dashboard
 - Date: 2026-03-15
-- Loop: #10 — Sprint 4F BUG 13
+- Loop: #11 — Sprint 4F BUG 14
 
 ## Test Scenario
-Cenário 1 — POST /api/agents/segment-specialist → 200 + segmento + registro em empresa_segment_knowledge
+Cenários 1, 2 e 3 da Sprint 4F — POST /api/agents/segment-specialist e POST /api/agents/insight-analyzer
 
 ## Steps Performed
 1. Autenticado em app.duogovernance.com.br/dashboard
-2. Disparado fetch fire-and-forget: POST /api/agents/segment-specialist
-3. Aguardado ~77s (analyzeSegment + analyzeBehavior)
-4. Resultado: window._seg5Status = done_500_76760ms
+2. Cenário 1: POST /api/agents/segment-specialist — fire-and-forget, aguardado ~80s
+3. Cenário 2: Segunda chamada ao segment-specialist para confirmar cache do Supabase
+4. Cenário 3: POST /api/agents/insight-analyzer — fire-and-forget, aguardado ~122s
+5. Lido código-fonte de insight-analyzer-agent.ts via raw.githubusercontent.com para diagnóstico
 
 ## Expected Result
-HTTP 200 + segmento_primario + registro em empresa_segment_knowledge
+- Cenário 1: HTTP 200 + segmento_primario + knowledge_id
+- Cenário 2: HTTP 200 + from_cache: true (registro existe no Supabase)
+- Cenário 3: HTTP 200 + insights enriquecidos com segment knowledge
 
 ## Actual Result
-HTTP 500 — { code: 22001, message: value too long for type character varying(200) }
+- Cenário 1: PASSOU — HTTP 200 em 80577ms
+  { segmento: "Equipamentos de Informática", knowledge_id: "c4afc4a5...", from_cache: false }
+- Cenário 2: PASSOU — HTTP 200 em 1457ms
+  { segmento: "Equipamentos de Informática", knowledge_id: "c4afc4a5...", from_cache: true }
+- Cenário 3: FALHOU — HTTP 500 em 122930ms
+  { error: "Expected ',' or ']' after array element in JSON at position 16080 (line 139 column 6)" }
 
 ## Console Errors
 Nenhum (erro server-side)
 
 ## Network Errors
-POST /api/agents/segment-specialist → 500 (76760ms)
+POST /api/agents/insight-analyzer → 500 (122930ms)
 
 ## Database Errors
-Postgres 22001: value too long for character varying(200)
-Tabela: empresa_segment_knowledge
-BUG 12 corrigido (maxTokens 4000) mas colunas VARCHAR(200) insuficientes
+Nenhum
 
 ## Root Cause Hypothesis
-MIGRATION 025.sql define VARCHAR(200) para:
-- segmento_primario
-- modelo_negocio_inferido
-- estrategia_detectada
-Com maxTokens 4000 Claude gera valores acima de 200 chars.
+BUG 14 — insight-analyzer-agent.ts linha 422 usa a mesma greedy regex que causou BUG 11 no segment-specialist:
+
+  const jsonMatch = response.content.match(/\{[\s\S]*\}/)
+  return JSON.parse(jsonMatch[0])
+
+A regex \{[\s\S]*\} é greedy — captura do primeiro { até o ÚLTIMO } no response.
+Com maxTokens: 6000, o Claude gera resposta grande (posição 16080 sugere ~16KB).
+Se Claude incluir qualquer texto ou JSON adicional após o objeto principal, a regex captura
+conteúdo inválido, causando erro de parse na posição 16080 (array context — ']' esperado).
+
+O segment-specialist recebeu o fix de brace-counting no BUG 11 (commit 2d64729),
+mas o insight-analyzer NÃO foi atualizado com o mesmo fix.
 
 ## Suggested Fix Direction
-ALTER TABLE empresa_segment_knowledge
-  ALTER COLUMN segmento_primario TYPE TEXT,
-  ALTER COLUMN modelo_negocio_inferido TYPE TEXT,
-  ALTER COLUMN estrategia_detectada TYPE TEXT;
-Criar MIGRATION 026.sql ou aplicar via Supabase SQL editor.
+Aplicar o mesmo fix de brace-counting ao insight-analyzer-agent.ts linha 422:
+
+Substituir:
+  const jsonMatch = response.content.match(/\{[\s\S]*\}/)
+  return JSON.parse(jsonMatch[0])
+
+Por brace-counting (igual ao fix BUG 11 em segment-specialist):
+  const start = content.indexOf('{')
+  let depth = 0, end = -1
+  for (let i = start; i < content.length; i++) {
+    if (content[i] === '{') depth++
+    else if (content[i] === '}') { depth--; if (depth === 0) { end = i; break } }
+  }
+  return JSON.parse(content.slice(start, end + 1))
