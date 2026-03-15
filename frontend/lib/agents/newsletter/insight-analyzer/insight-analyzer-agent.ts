@@ -75,7 +75,7 @@ export class InsightAnalyzerAgent {
   constructor(private supabase: SupabaseClient) {
     this.claudeClient = new ClaudeClient({
       model: 'claude-sonnet-4-6',
-      maxTokens: 8000,  // BUG 15: 6000 insuficiente com segment knowledge enrichment no prompt
+      maxTokens: 16000,  // BUG 15b: 8000 ainda insuficiente — limite + prompt conciso evitam timeout Vercel
       temperature: 0.4,
     })
   }
@@ -347,6 +347,7 @@ export class InsightAnalyzerAgent {
       systemPrompt:
         `Você é o Insight Analyzer Agent do DUO Governance. Analise dados de empresa fornecedora B2G brasileira. Responda APENAS com JSON válido, sem markdown ou texto adicional. Use números reais dos dados fornecidos.\nQualidade dos dados: ${confiancaLabel} (score: ${confianca_score}). ${confiancaAviso}${segmentoInfo}`,
       prompt: `Com base nos dados internos e macroeconômicos, gere insights acionáveis com contexto educacional.
+IMPORTANTE: gere no máximo 2 itens em cada array (insights_precificacao, insights_radar_b2g, insights_macro, insights_regionais). Seja direto e conciso em cada campo.
 Se uma API não retornou dados (null), ignore os insights que dependem dela.
 ${segmentKnowledge ? 'Use o campo segmento_empresa.best_practices e benchmarks_mercado para tornar os insights mais precisos ao segmento da empresa.' : ''}
 
