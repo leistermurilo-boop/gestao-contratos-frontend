@@ -7,7 +7,7 @@ Cowork escreve aqui. O terminal monitora via '/loop'.
 
 ## Estado Atual
 
-**Status: IN_PROGRESS**
+**Status: DONE**
 **Loop #10 — Sprint 4F BUG 13**
 **Data:** 2026-03-15
 
@@ -52,4 +52,4 @@ Apos o fix, Cowork re-testa todos 3 cenarios:
 | 2026-03-13 | Loop #7 | BUG 10 fetchIBGE offset | DONE dev |
 | 2026-03-13 | Loop #8 | BUG 11 parseJSON greedy | DONE dev |
 | 2026-03-13 | Loop #9 | BUG 12 maxTokens 2000 | DONE dev |
-| 2026-03-15 | Loop #10 | BUG 13 VARCHAR(200) overflow | READY — aguardando fix terminal |
+| 2026-03-15 | Loop #10 | BUG 13 VARCHAR(200) overflow | DONE analyst → architect → dev → qa |
