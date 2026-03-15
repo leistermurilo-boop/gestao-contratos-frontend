@@ -419,9 +419,17 @@ RETORNE exatamente este JSON:
 }`,
     })
 
-    const jsonMatch = response.content.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('Claude não retornou JSON válido')
-    return JSON.parse(jsonMatch[0])
+    // BUG 14: greedy regex capturava até o último } — brace counting para no objeto correto
+    const content = response.content
+    const start = content.indexOf('{')
+    if (start === -1) throw new Error('Claude não retornou JSON válido em parseInsightResponse')
+    let depth = 0, end = -1
+    for (let i = start; i < content.length; i++) {
+      if (content[i] === '{') depth++
+      else if (content[i] === '}') { depth--; if (depth === 0) { end = i; break } }
+    }
+    if (end === -1) throw new Error('JSON não fechado em parseInsightResponse')
+    return JSON.parse(content.slice(start, end + 1))
   }
 
   // === SALVAR ===

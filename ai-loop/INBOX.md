@@ -7,7 +7,7 @@ Cowork escreve aqui. O terminal monitora via '/loop'.
 
 ## Estado Atual
 
-**Status: READY**
+**Status: IN_PROGRESS**
 **Loop #11 — Sprint 4F BUG 14**
 **Data:** 2026-03-15
 
