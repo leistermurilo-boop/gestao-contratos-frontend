@@ -75,7 +75,7 @@ export class InsightAnalyzerAgent {
   constructor(private supabase: SupabaseClient) {
     this.claudeClient = new ClaudeClient({
       model: 'claude-sonnet-4-6',
-      maxTokens: 6000,
+      maxTokens: 8000,  // BUG 15: 6000 insuficiente com segment knowledge enrichment no prompt
       temperature: 0.4,
     })
   }
