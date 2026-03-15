@@ -17,6 +17,15 @@
 
 ## Histórico
 
+### [2026-03-15] — BUG 13 VARCHAR overflow (Cowork loop #10)
+| Cenário | Perfil | Resultado | Notas |
+|---------|--------|-----------|-------|
+| POST /api/agents/segment-specialist → 500 | admin | ❌ | Postgres 22001 — valor > VARCHAR(200) |
+| MIGRATION 026 criada (ALTER→TEXT) | — | ⏳ | Aguarda aplicação manual no Supabase |
+| Cenário 1: POST segment-specialist → 200 | admin | ⏳ | Após migration aplicada |
+| Cenário 2: empresa_segment_knowledge inserida | admin | ⏳ | Após migration aplicada |
+| Cenário 3: insight-analyzer usa segment knowledge | admin | ⏳ | Após migration aplicada |
+
 ### [2026-03-12] — Sprint 4C fix definitivo — 2 chamadas Claude (Cowork loop #4b)
 | Cenário | Perfil | Resultado | Notas |
 |---------|--------|-----------|-------|

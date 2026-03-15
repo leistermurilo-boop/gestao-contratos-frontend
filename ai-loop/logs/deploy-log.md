@@ -18,6 +18,12 @@
 
 ## Histórico
 
+### [2026-03-15] — fix(migration): MIGRATION 026 VARCHAR→TEXT BUG 13 [Loop #10]
+- Trigger: push para main (aguardando)
+- Status: ⏳ — Migration 026 criada, aguarda aplicação manual no Supabase SQL Editor
+- Arquivos: `database/migrations/MIGRATION 026.sql`
+- Notas: ALTER TABLE 3 colunas VARCHAR(200)→TEXT em empresa_segment_knowledge
+
 ### [2026-03-12] 42f57e5 — fix(data-collector): 3 bugs [Loop #2]
 - Trigger: push para main
 - Status: ✅ sucesso — validado pelo Cowork

@@ -1,46 +1,34 @@
-# @analyst — Database Analysis — Sprint 4E (2026-03-13)
+# @analyst — Database Analysis — BUG 13 (2026-03-15)
 
-## Causa Raiz por Bug
+## Causa Raiz Confirmada
 
-### BUG 1+2 — fetchIPCA() — CRÍTICO
-**Arquivo:** `insight-analyzer-agent.ts:162-172`
-- **BUG 1 (linha 171):** `valores.reduce((acc,v) => acc+v, 0)` soma 12 observações.
-  A variável 2265 (IPCA acumulado 12m) já é o valor acumulado — não se soma.
-  Resultado: 12 × ~4.36% = ~52.4% enviado ao Claude e salvo no banco.
-- **BUG 2 (linha 162):** URL com `202401-202412` hardcoded. Em 2027 retorna dados de 2024.
-  `mes_referencia: '2024-12'` também hardcoded.
+**Postgres 22001: value too long for type character varying(200)**
 
-### BUG 3 — fetchPNCP() — CRÍTICO
-**Arquivo:** `insight-analyzer-agent.ts:199-211`
-- `tamanhoPagina: '5'` → HTTP 400 (mínimo obrigatório: 10)
-- `dataInicial/dataFinal` no formato `yyyy-MM-dd` → HTTP 422 (exige `yyyyMMdd`)
-- Sem `codigoModalidadeContratacao` → HTTP 400 (obrigatório pela API)
-- Resultado: `res.ok === false` → `continue` silencioso → sempre retorna `[]`
+MIGRATION 025.sql define 3 colunas como `VARCHAR(200)` na tabela `empresa_segment_knowledge`:
+- `segmento_primario VARCHAR(200) NOT NULL` — linha 12
+- `modelo_negocio_inferido VARCHAR(200)` — linha 53
+- `estrategia_detectada VARCHAR(200)` — linha 66
 
-### BUG 4 — fetchIBGE() — ALTO
-**Arquivo:** `insight-analyzer-agent.ts:242-250`
-- URL hardcoded `periodos/2021` e chave `serie?.['2021']`.
-- PIB tem defasagem de ~2 anos. Fix: usar `anoAtual - 2` dinamicamente.
+Com `maxTokens: 4000` (fix BUG 12), o Claude gera valores descritivos mais ricos e longos para esses campos. O prompt instrui Claude a retornar strings como `"segmento_primario": "Equipamentos de Informática..."` — com maxTokens 4000 o modelo expande essas descrições além dos 200 chars.
 
-### BUG 5 — confianca_score não usada — ALTO
-**Arquivo:** `insight-analyzer-agent.ts` — saveInsights (linha 367) vs generateInsights (linha 255)
-- `confianca` calculada em `saveInsights()` mas não chega ao `generateInsights()`.
-- Claude gera análises sem saber qualidade dos dados (0.40 = 1 API, 0.85 = 4 APIs).
+O ponto de falha exato é `segment-specialist-agent.ts:347` — método `saveKnowledge()`, no `.upsert()` que passa os 3 campos VARCHAR(200) diretamente.
 
-### BUG 6 — progresso_maturidade hardcoded — ALTO
-**Arquivo:** `content-writer-agent.ts:114`
-- `progresso_maturidade: intelligence ? 70 : undefined` — sempre 70%.
-- Fix: calcular baseado em fontes reais disponíveis em `insights` (ipca, selic, pncp, ibge).
+## Evidências
 
-### BUG 7 — headers email ausentes — MÉDIO
-**Arquivo:** `send-newsletter-agent.ts:63-72`
-- Sem `List-Unsubscribe` (RFC 2369 + Gmail/Yahoo 2024 obrigatório).
-- Sem `replyTo`.
+- `database/migrations/MIGRATION 025.sql:12` — `segmento_primario VARCHAR(200) NOT NULL`
+- `database/migrations/MIGRATION 025.sql:53` — `modelo_negocio_inferido VARCHAR(200)`
+- `database/migrations/MIGRATION 025.sql:66` — `estrategia_detectada VARCHAR(200)`
+- `frontend/lib/agents/newsletter/segment-specialist/segment-specialist-agent.ts:347-368` — upsert sem truncagem
+- `frontend/lib/agents/newsletter/segment-specialist/segment-specialist-agent.ts:138` — `maxTokens: 4000` (BUG 12 fix)
+- Browser report: `elapsed=76760ms` → as 2 chamadas Claude executaram com sucesso; falha é somente no save
 
-### BUG 8 — getDraft filtra status mesmo com draft_id — MÉDIO
-**Arquivo:** `send-newsletter-agent.ts:103-121`
-- `.eq('status', 'draft')` aplicado mesmo quando `draft_id` é fornecido.
-- Draft com status='sent' → PGRST116 → null → falha silenciosa.
+## Impacto
+
+`POST /api/agents/segment-specialist` retorna 500 para qualquer empresa cujos valores gerados ultrapassem 200 chars. O Insight Analyzer (`getSegmentKnowledge`) nunca recebe dados de segmento, pois o registro nunca é inserido no banco.
 
 ## Hipóteses Descartadas
-- RLS / auth: não envolvidos — todos os erros são lógica de negócio ou parâmetros de API externa.
+
+- **RLS policy:** descartado — erro 22001 é de tipo/tamanho de coluna, não de permissão (seria 403/42501)
+- **Bug no parseJSON:** descartado — BUG 11 já corrigido; JSON parseado corretamente, erro é no INSERT
+- **maxTokens insuficiente:** descartado — BUG 12 já corrigido para 4000; o problema é o inverso (mais tokens = mais texto)
+- **Problema de rede/timeout:** descartado — elapsed=76760ms indica execução completa das 2 chamadas Claude; falha é no save final
