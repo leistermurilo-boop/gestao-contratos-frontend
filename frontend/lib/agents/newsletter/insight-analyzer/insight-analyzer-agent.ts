@@ -320,7 +320,7 @@ export class InsightAnalyzerAgent {
       esferas_atuacao: intelligence.esferas_atuacao,
       padroes_renovacao: intelligence.padroes_renovacao,
       total_contratos: intelligence.total_contratos_analisados,
-      ipca_12m: external.ipca?.acumulado_12m ?? null,
+      ipca_12m_pct: external.ipca?.acumulado_12m ?? null,  // BUG 16: nome explícito evita Claude calcular 12×mês
       selic: external.selic ?? null,
       pncp_total_oportunidades: external.pncp.length,
       pncp_editais: external.pncp.slice(0, 5),
@@ -391,6 +391,7 @@ RETORNE exatamente este JSON:
       "titulo": "string",
       "prioridade": "media|baixa",
       "selic_atual": 0,
+      "ipca_12m_pct": 0.0,
       "tendencia": "alta|queda|estavel",
       "impacto": "string",
       "acao_recomendada": "string",

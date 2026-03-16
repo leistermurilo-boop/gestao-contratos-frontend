@@ -224,6 +224,7 @@ Responda APENAS com JSON válido. Sem markdown, sem texto extra.`,
       prompt: `Gere o conteúdo editorial da newsletter para ${empresaNome}.
 
 DADOS:
+ATENÇÃO: ipca_12m = IPCA acumulado nos últimos 12 meses em % (ex: 3.81 = 3.81% ao ano). Use EXATAMENTE o valor fornecido. NÃO calcule IPCA por conta própria. NÃO some meses.
 ${JSON.stringify(contexto, null, 2)}
 
 RETORNE:
@@ -278,12 +279,19 @@ RETORNE:
     let raw = response.content
     const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (fence) raw = fence[1].trim()
-    const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
+    // BUG 17: greedy regex substituída por brace-counting (mesmo padrão do BUG 14 fix)
+    const start = raw.indexOf('{')
+    if (start === -1) {
       console.error('[ContentWriterAgent] Claude raw:', raw.substring(0, 500))
       throw new Error('Claude não retornou JSON válido nos metadados')
     }
-    return JSON.parse(jsonMatch[0]) as NewsletterMetaRaw
+    let depth = 0, end = -1
+    for (let i = start; i < raw.length; i++) {
+      if (raw[i] === '{') depth++
+      else if (raw[i] === '}') { depth--; if (depth === 0) { end = i; break } }
+    }
+    if (end === -1) throw new Error('JSON não fechado em generateMeta')
+    return JSON.parse(raw.slice(start, end + 1)) as NewsletterMetaRaw
   }
 
   // === HELPERS ===
