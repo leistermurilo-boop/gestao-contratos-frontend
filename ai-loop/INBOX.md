@@ -7,7 +7,7 @@ Cowork escreve aqui. O terminal monitora via '/loop'.
 
 ## Estado Atual
 
-**Status: IN_PROGRESS**
+**Status: DONE**
 **Sprint 4G — Correção IPCA 52% + Auditoria Agentes**
 **Data:** 2026-03-15
 
@@ -85,4 +85,4 @@ Use EXATAMENTE o valor fornecido. NÃO calcule IPCA por conta própria.
 | 2026-03-15 | Loop #11 | BUG 14 greedy regex insight-analyzer | DONE dev |
 | 2026-03-15 | Loop #12 | BUG 15 maxTokens insight-analyzer | DONE dev |
 | 2026-03-15 | Sprint 4F | Segment Specialist Agent | DONE |
-| 2026-03-15 | Loop #13 | Sprint 4G BUG 16+17+18 IPCA 52% | READY — aguardando fix terminal |
+| 2026-03-15 | Loop #13 | Sprint 4G BUG 16+17+18 IPCA 52% | DONE analyst → architect → dev → qa |
